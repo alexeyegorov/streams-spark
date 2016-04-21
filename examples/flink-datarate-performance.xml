@@ -1,0 +1,166 @@
+<application id="spark-datarate" copies="1">
+
+    <!--<stream id="data" class="streams.cta.io.KryoStream" url="file:/Users/alexey/Documents/streams-cta/cta_data.kryo"/>-->
+    <!--<stream id="data" class="streams.cta.io.protobuf.ProtoRawEventStream"-->
+            <!--addresses="tcp://127.0.0.1:5550,tcp://127.0.0.1:5551"/>-->
+    <property name="multiply" value="100" />
+
+    <property name="infile" value="hdfs://ls8cb01.cs.uni-dortmund.de:9000/FACT/simulation/proton_klaus_12/" />
+
+    <properties url="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/examples/mc/settings_mc.properties" />
+
+    <property name="infile" value="hdfs://ls8cb01.cs.uni-dortmund.de:9000/FACT/simulation/" />
+    <property name="drsfile" value="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/examples/mc/stdMcDrsFile.drs.fits.gz" />
+
+    <property name="integralGainFile" value="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/examples/mc/defaultIntegralGains.csv" />
+
+    <property name="outfile" value="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/testoutfile_mc.txt" />
+
+    <service id="calibService" class="fact.calibrationservice.ConstantCalibService" />
+    <!--<properties url="file://include-test.xml"/>-->
+
+    <!--<stream id="data" class="stream.generator.RandomStream" limit="100000" />-->
+    <!--<stream id="data" class="stream.io.multi.FitsStreamGenerator"  url="${infile}" limit="1"/>-->
+    <!--<stream id="data" class="streams.cta.io.eventio.EventIOStream"-->
+            <!--url="file:/Users/alexey/Documents/proton_20deg_0deg_run32287___cta-prod2_desert-1640m-Aar.simtel.gz"/>-->
+
+    <!--<stream id="data" class="fact.io.RecursiveDirectoryStream"-->
+            <!--suffix=".fits.gz" url="${infile}" multiply="1" >-->
+        <!--<stream id="1" class="fact.io.FitsStream"/>-->
+    <!--</stream>-->
+
+    <!--<stream id="data" class="stream.io.multi.SequentialMultiStream">-->
+        <!--<stream id="1" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016910.910_D_MonteCarlo016_Events.fits.gz" />-->
+        <!--<stream id="2" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016911.911_D_MonteCarlo016_Events.fits.gz" />-->
+        <!--<stream id="3" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016912.912_D_MonteCarlo016_Events.fits.gz" />-->
+        <!--<stream id="4" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016913.913_D_MonteCarlo016_Events.fits.gz" />-->
+        <!--<stream id="5" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016914.914_D_MonteCarlo016_Events.fits.gz" />-->
+    <!--</stream>-->
+
+    <stream id="data" class="stream.IterateFilesStream" url="${infile}" ending=".fits.gz" copies="1" limit="100">
+        <stream id="_" class="fact.io.FitsStream"/>
+    </stream>
+        <!--<stream id="data" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016910.910_D_MonteCarlo016_Events.fits.gz" copies="1"/>-->
+    <!--<stream id="data" class="stream.io.multi.SequentialMultiStream">-->
+        <!--<stream id="2" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016911.911_D_MonteCarlo016_Events.fits.gz" />-->
+        <!--<stream id="3" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016912.912_D_MonteCarlo016_Events.fits.gz" />-->
+        <!--<stream id="4" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016913.913_D_MonteCarlo016_Events.fits.gz" />-->
+        <!--<stream id="5" class="fact.io.FitsStream"-->
+                <!--url="${infile}/00016914.914_D_MonteCarlo016_Events.fits.gz" />-->
+    <!--</stream>-->
+
+    <!--<stream id="data" class="stream.generator.RandomStream" limit="500000"/>-->
+    <process input="data" id="extraction" copies="1">
+        <streams.performance.Performance every="2" host="127.0.0.1">
+        <RenameKey from="Data" to="raw:data" />
+        <fact.pixelsets.AllPixels outputKey="pixels" />
+        <RenameKey from="StartCellData" to="meta:startCellData" />
+
+        <!--<fact.utils.PreviousEventInfo />-->
+        <stream.flow.Skip condition="%{data.TriggerType} != -1" />
+        <Skip condition="%{data.shower} == null"/>
+        </streams.performance.Performance>
+
+        <!--<fact.datacorrection.DrsCalibration url="${drsfile}" />-->
+        <!--&lt;!&ndash;<fact.datacorrection.PatchJumpRemoval />&ndash;&gt;-->
+        <!--<fact.datacorrection.RemoveSpikes />-->
+        <!--<fact.filter.DrsTimeCalibration />-->
+        <!--<fact.filter.ArrayTimeCorrection />-->
+        <!--<fact.datacorrection.InterpolateTimeSeries calibService="calibService"/>-->
+
+        <!--&lt;!&ndash; Extract numEstPhotons &ndash;&gt;-->
+        <!--<fact.extraction.BasicExtraction url="${integralGainFile}"/>-->
+        <!--<fact.extraction.EstimateBaseline />-->
+        <!--<fact.extraction.TimeOverThreshold />-->
+        <!--<fact.datacorrection.CorrectSaturation />-->
+        <!--<fact.extraction.BasicExtraction url="${integralGainFile}"/>-->
+
+        <!--&lt;!&ndash; Extract ArrivalTimes &ndash;&gt;-->
+        <!--<fact.extraction.ArrivalTimeForPositions />-->
+        <!--<fact.extraction.ArrivalTimePolynomFit />-->
+        <!--<fact.datacorrection.CorrectPixelDelays url="${pixelDelayFile}"/>-->
+
+        <!--<fact.datacorrection.InterpolatePhotondata calibService="calibService"/>-->
+
+        <!--&lt;!&ndash; Statistical Features &ndash;&gt;-->
+        <!--<fact.statistics.ArrayStatistics key="pixels:estNumPhotons"/>-->
+        <!--<fact.statistics.ArrayStatistics key="pixels:arrivalTimes"/>-->
+
+        <!--&lt;!&ndash;<fact.features.source.SourcePosition outputKey="cetatauri" sourceRightAscension="5.627416667" sourceDeclination="21.1425" auxService="auxService" />&ndash;&gt;-->
+        <!--&lt;!&ndash;<fact.cleaning.TwoLevelTimeNeighbor calibService="calibService" starPositionKeys="cetatauri" />&ndash;&gt;-->
+
+        <!--<Skip condition="%{data.shower} == null"/>-->
+        <!--<fact.pixelsets.NumPixel pixelSetKey="shower" />-->
+        <!--<streams.performance.Performance every="4" host="127.0.0.1">-->
+            <!--<stream.monitor.DataRate every="1"/>-->
+            <!--<stream.flow.Skip condition="%{data.TriggerType} != 4" />-->
+            <!--&lt;!&ndash; Calibration: &ndash;&gt;-->
+            <!--&lt;!&ndash; PreviousEventInfo, DrsCalibration, PatchJumpRemoval, RemoveSpikes,-->
+            <!--DrsTimeCalibration, ArrayTimeCorrection, InterpolateBadPixel &ndash;&gt;-->
+            <!--<include url="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/examples/mc/calibration_mc.xml" />-->
+            <!--&lt;!&ndash; Output: DataCalibrated &ndash;&gt;-->
+
+            <!--&lt;!&ndash; Extraction &ndash;&gt;-->
+            <!--&lt;!&ndash; BasicExtraction, RisingEdgeForPositions, RisingEdgePolynomFit, TimeOverThreshold,-->
+            <!--PhotonChargeTimeOverThreshold, HandleSaturation, CorrectPixelDelays&ndash;&gt;-->
+            <!--<include url="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/examples/mc/extraction_mc.xml" />-->
+            <!--&lt;!&ndash; Output: photoncharge, arrivalTime &ndash;&gt;-->
+
+            <!--&lt;!&ndash; Cleaning &ndash;&gt;-->
+            <!--&lt;!&ndash; SourcePosition(Cetatauri), CoreNeighborCleanTimeNeighbor&ndash;&gt;-->
+            <!--<include url="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/examples/mc/cleaning_mc.xml" />-->
+            <!--&lt;!&ndash; Output: shower &ndash;&gt;-->
+
+            <!--&lt;!&ndash; Parameter calculation (only source independent) &ndash;&gt;-->
+            <!--&lt;!&ndash; ArrayMean(photoncharge,arrivalTime), ArrayStatistics(photoncharge,arrivalTime,maxSlopes,-->
+            <!--arrivalTimePos,maxSlopesPos,maxAmplitudePosition,photonchargeSaturated,arrivalTimeTOT),-->
+            <!--Size, DistributionFromShower, M3Long, Length, Width, NumberOfIslands, TimeGraident,-->
+            <!--Concentration, ConcentrationCore, ConcentrationAtCenterOfGravity, Leakage, TimeSpread,-->
+            <!--ShowerSlope, Disp &ndash;&gt;-->
+            <!--<include url="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/examples/mc/parameterCalc_mc.xml" />-->
+            <!--&lt;!&ndash; Output: source independent parameters &ndash;&gt;-->
+
+            <!--&lt;!&ndash; Parameter calculation (only source dependent) &ndash;&gt;-->
+            <!--&lt;!&ndash; SourcePosition(${sourcename}), AntiSourcePosition(5), Alpha(for 6 Sources),-->
+            <!--Distance(for 6 Sources), CosDeltaAlpha(for 6 Sources), Theta(for 6 Sources) &ndash;&gt;-->
+            <!--<include url="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/examples/mc/sourceParameter_mc.xml" />-->
+            <!--&lt;!&ndash; Output: source dependent parameters &ndash;&gt;-->
+
+            <!--<fact.io.PrintKeysOnConsole keys="${keysForOutput}" />-->
+            <!--&lt;!&ndash;<streams.DataRate every="2" silent="true"/>&ndash;&gt;-->
+            <!--&lt;!&ndash;<streams.cta.extraction.ArrivalTime/>&ndash;&gt;-->
+            <!--&lt;!&ndash;<streams.cta.extraction.Photons/>&ndash;&gt;-->
+            <!--&lt;!&ndash;<stream.demo.Enqueue queue="performance" condition="%{data.@datarate} != null"/>&ndash;&gt;-->
+            <!--&lt;!&ndash;<stream.demo.Enqueue queue="nodatarate" condition="0 == 0"/>&ndash;&gt;-->
+        <!--</streams.performance.Performance>-->
+    </process>
+
+    <!--<queue class="stream.io.BlockingQueue" id="performance" />-->
+    <!--<queue class="stream.io.BlockingQueue" id="nodatarate" />-->
+
+    <!--<process input="performance" id="performance-write">-->
+        <!--<streams.performance.Performance every="2" host="127.0.0.1">-->
+            <!--<PrintData/>-->
+        <!--&lt;!&ndash;<stream.demo.Enqueue queues="nodatarate" condition="%{data.@datarate} != null"/>&ndash;&gt;-->
+            <!--&lt;!&ndash;&lt;!&ndash;<PrintData/>&ndash;&gt;&ndash;&gt;-->
+            <!--&lt;!&ndash;<streams.cta.io.JSONWriter url="file:storm_datarate.json" keys="@datarate" writeblock="true"/>&ndash;&gt;-->
+        <!--</streams.performance.Performance>-->
+    <!--</process>-->
+
+    <!--<process input="nodatarate" id="withoutdatarate">-->
+        <!--<streams.performance.Performance every="2" host="127.0.0.1">-->
+        <!--&lt;!&ndash;<stream.logger.Message message="TEST TEST TEST" />&ndash;&gt;-->
+        <!--&lt;!&ndash;<PrintData/>&ndash;&gt;-->
+        <!--</streams.performance.Performance>-->
+        <!--&lt;!&ndash;<streams.cta.io.JSONWriter url="file:storm_datarate.json" keys="@datarate" writeblock="true"/>&ndash;&gt;-->
+    <!--</process>-->
+</application>

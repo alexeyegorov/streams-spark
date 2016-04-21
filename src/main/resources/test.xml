@@ -1,0 +1,28 @@
+<container id="test">
+    <!-- 
+    	A sample user-input data stream, reading from the zattoo.log.gz file provided
+    	in the src/test/resources directory
+     -->
+    <stream id="input" class="stream.io.LineStream"
+        	url="http://192.168.10.10/data/access.log" />
+
+
+    
+    <!--  A "dummy" data enrichment bolt. This implementation will aggregate
+          the number of users entering/leaving channels at a 5-minute interval.
+          
+          The 'ChannelUsageChange' processor will emit tuples holding the
+          channel name/number of switching users if the number of switching
+          users in the last 5-min-interval exceeds the threshold
+      -->
+    <process id="process:input" input="input" >   	
+    	<!-- 
+    		<stream.logger.Message message="'bla' is processing item" />
+    	 -->
+    	 
+    	 <!--  This processor adds a simple delay of 1 second to the stream. -->
+    	 <stream.flow.Delay time="1s" />
+    	 <PrintData />
+    </process>
+
+</container>

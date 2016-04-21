@@ -1,0 +1,20 @@
+<container id="example">
+
+	<stream id="data" class="stream.generator.RandomStream" limit="10000" />
+	
+	<process input="data">
+		<!--  -->
+		<CreateID />
+		<!--<streams.performance.Performance every="100" host="127.0.0.1">-->
+		<!--<stream.util.AlternateAB key="flag" />-->
+		<!--<stream.flow.Delay time="10ms" />-->
+		<streams.DataRate every="100" silent="true"/>
+		<PrintData />
+		<!--<stream.logger.Message message="'bla' is processing item" />-->
+<!--
+		<stream.net.DataTap port="9000" />
+-->
+		<!--<stream.demo.Count />-->
+	</process>
+	
+</container>

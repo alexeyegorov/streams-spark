@@ -1,0 +1,28 @@
+<application id="example">
+
+    <stream id="data" class="stream.generator.RandomStream" limit="1000000"/>
+
+    <process input="data" id="separation">
+        <CreateID />
+        <!--<streams.performance.Performance every="100" host="127.0.0.1">-->
+            <!--<stream.util.AlternateAB key="flag" />-->
+            <stream.demo.Enqueue queues="gamma" condition="%{data.flag} != 'A'"/>
+            <stream.demo.Enqueue queues="hadron" condition="%{data.flag} = 'B'"/>
+        <!--</streams.performance.Performance>-->
+    </process>
+
+    <queue id="gamma" />
+    <queue id="hadron" />
+
+    <process input="gamma" id="performance1">
+        <!--<streams.performance.Performance every="100" host="127.0.0.1">-->
+            <PrintData />
+        <!--</streams.performance.Performance>-->
+    </process>
+
+    <process input="hadron" id="performance2">
+        <!--<streams.performance.Performance every="100" host="127.0.0.1">-->
+            <PrintData />
+        <!--</streams.performance.Performance>-->
+    </process>
+</application>

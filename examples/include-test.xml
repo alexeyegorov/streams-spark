@@ -1,0 +1,30 @@
+<module>
+
+    <fact.utils.Remapping
+            key="Data"
+            outputKey="Data"
+    />
+    <fact.utils.RemappingKeys
+            keys="McCherPhotWeight,McCherPhotNumber,McMuonCherPhotWeight,McNoisePhotWeight,McCherArrTimeMean,McCherArrTimeVar,McCherArrTimeMin,McCherArrTimeMax"
+    />
+    <fact.filter.DrsCalibration
+            url="${DrsCalibration_url}"
+            key="Data"
+            outputKey="DataCalibrated"
+    />
+    <fact.datacorrection.RemoveSpikes
+            dataKey="DataCalibrated"
+            outputKey="DataCalibrated"
+            startCellKey="StartCellData"
+            leftBorder="${RemoveSpikes_leftBorder}"
+            spikeLimit="${RemoveSpikes_spikeLimit}"
+            topSlopeLimit="${RemoveSpikes_topSlopeLimit}"
+            maxSpikeLength="${RemoveSpikes_maxSpikeLength}"
+    />
+
+    <fact.datacorrection.InterpolateBadPixel
+            key="DataCalibrated"
+            outputKey="DataCalibrated"
+            badChidIds="${InterpolateBadPixel_badChidIds}"
+    />
+</module>
