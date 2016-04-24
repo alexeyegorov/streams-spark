@@ -14,10 +14,12 @@ import stream.ProcessContext;
 /**
  * @author chris, alexey
  */
-public class FlinkContext implements ProcessContext, Serializable {
-    /** The unique class ID */
+public class SparkContext implements ProcessContext, Serializable {
+    /**
+     * The unique class ID
+     */
     private static final long serialVersionUID = 6162013508460469957L;
-    static Logger log = LoggerFactory.getLogger(FlinkContext.class);
+    static Logger log = LoggerFactory.getLogger(SparkContext.class);
 
     final Map<String, Serializable> values = new LinkedHashMap<>();
     transient Map<String, Object> volatileValues = new LinkedHashMap<>();
@@ -27,8 +29,8 @@ public class FlinkContext implements ProcessContext, Serializable {
      *
      * @param id UUID of a process
      */
-    public FlinkContext(String id) {
-        set("process", (!id.equals(""))? id : UUID.randomUUID().toString());
+    public SparkContext(String id) {
+        set("process", (!id.equals("")) ? id : UUID.randomUUID().toString());
     }
 
     /**

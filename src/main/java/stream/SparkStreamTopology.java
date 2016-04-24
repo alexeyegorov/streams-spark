@@ -1,5 +1,6 @@
 package stream;
 
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -7,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import java.io.OutputStreamWriter;
@@ -18,6 +20,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import spark.config.ProcessListHandler;
 import spark.config.SourceHandler;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.storm.Constants;
@@ -46,7 +49,6 @@ public class SparkStreamTopology {
      * List of services
      */
 //    public List<SparkService> flinkServices = new ArrayList<>(0);
-
     public SparkStreamTopology(Document doc, JavaStreamingContext jsc) {
         this.doc = doc;
         this.jsc = jsc;
@@ -98,21 +100,17 @@ public class SparkStreamTopology {
         JavaDStream<Long> data = sources.get("data").count();
         data.print();
         // create processor list handler and apply it to ProcessorLists
-//        return initFlinkFunctions(doc, sources);
-        return true;
+        return initSparkFunctions(doc, sources);
     }
 
     /**
      * Execute previously created topology.
      */
     public void executeTopology() throws Exception {
-        // set level of parallelism for the job
-        jsc.start();
-        jsc.awaitTermination();
-
-//        env.setParallelism(getParallelism(doc.getDocumentElement()));
         // execute spark job if we were able to init all the functions
-//        env.execute(getVariables().get(Constants.APPLICATION_ID));
+        jsc.start();
+        // wait for Spark job zu terminate
+        jsc.awaitTermination();
     }
 
 //    /**
@@ -133,71 +131,72 @@ public class SparkStreamTopology {
 //        }
 //    }
 
-//    /**
-//     * Find ProcessorLists and handle them to become FlatMap functions.
-//     *
-//     * @param doc     XML document
-//     * @param sources list of sources / queues
-//     * @return true if all functions can be applied; false if something goes wrong.
-//     */
-//    private boolean initFlinkFunctions(Document doc, HashMap<String, DataStream<Data>> sources) {
-//        // check if any function is found to be applied onto data stream
-//        // spark topology won't stop, if some queue is mentioned but not used and if processor list
-//        // is using an input queue that is not filled
-//        boolean anyFunctionFound = false;
-//
-//        // create processor list handler
-//        ProcessListHandler handler = new ProcessListHandler(ObjectFactory.newInstance());
-//
-//        //TODO use getElementsByTagName?
-//        NodeList list = doc.getDocumentElement().getChildNodes();
-//        int length = list.getLength();
-//        for (int i = 0; i < length; i++) {
-//            Node node = list.item(i);
-//            if (node.getNodeType() == Node.ELEMENT_NODE) {
-//                final Element el = (Element) node;
-//
-//                if (handler.handles(el)) {
-//                    log.info("--------------------------------------------------------------------------------");
-//                    log.info("Handling element '{}'", node.getNodeName());
-//                    try {
-//                        handler.handle(el, this);
-//                    } catch (Exception e) {
-//                        log.error("Handler {} could not handle element {}.", handler, el);
-//                        return false;
-//                    }
-//                    String input = el.getAttribute("input");
-//                    log.info("--------------------------------------------------------------------------------");
-//                    if (ProcessListHandler.class.isInstance(handler)) {
-//                        // apply processors
-//                        SparkProcessList function = (SparkProcessList) handler.getFunction();
-//                        if (!sources.containsKey(input)) {
-//                            log.error("Input '{}' has not been defined or no other processor is " +
-//                                    "filling this input queue. Define 'stream' or " +
-//                                    "put processor list after the processor list defining the " +
-//                                    "output queue with this input name.", input);
-//                            continue;
-//                        }
-//
-//                        DataStream<Data> dataStream = sources.get(input)
+    /**
+     * Find ProcessorLists and handle them to become FlatMap functions.
+     *
+     * @param doc     XML document
+     * @param sources list of sources / queues
+     * @return true if all functions can be applied; false if something goes wrong.
+     */
+    private boolean initSparkFunctions(Document doc, HashMap<String, JavaReceiverInputDStream<Data>> sources) {
+        // check if any function is found to be applied onto data stream
+        // spark topology won't stop, if some queue is mentioned but not used and if processor list
+        // is using an input queue that is not filled
+        boolean anyFunctionFound = false;
+
+        // create processor list handler
+        ProcessListHandler handler = new ProcessListHandler(ObjectFactory.newInstance());
+
+        //TODO use getElementsByTagName?
+        NodeList list = doc.getDocumentElement().getChildNodes();
+        int length = list.getLength();
+        for (int i = 0; i < length; i++) {
+            Node node = list.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                final Element el = (Element) node;
+
+                if (handler.handles(el)) {
+                    log.info("--------------------------------------------------------------------------------");
+                    log.info("Handling element '{}'", node.getNodeName());
+                    try {
+                        handler.handle(el, this);
+                    } catch (Exception e) {
+                        log.error("Handler {} could not handle element {}.", handler, el);
+                        return false;
+                    }
+                    String input = el.getAttribute("input");
+                    log.info("--------------------------------------------------------------------------------");
+                    if (ProcessListHandler.class.isInstance(handler)) {
+                        // apply processors
+                        Function<Data, Data> function = (Function<Data, Data>) handler.getFunction();
+                        if (!sources.containsKey(input)) {
+                            log.error("Input '{}' has not been defined or no other processor is " +
+                                    "filling this input queue. Define 'stream' or " +
+                                    "put processor list after the processor list defining the " +
+                                    "output queue with this input name.", input);
+                            continue;
+                        }
+
+                        sources.get(input).map(function);
+//                        DataStream<Data> dataStream =
 //                                .flatMap(function)
 //                                .setParallelism(getParallelism(el));
 //
 //                        // detect output queues
 //                        List<String> outputQueues = function.getListOfOutputQueues();
-//
-//                        // split the data stream if there are any queues used inside
-//                        // of process list
+
+                        // split the data stream if there are any queues used inside
+                        // of process list
 //                        if (outputQueues.size() > 0) {
 //                            splitDataStream(sources, dataStream, outputQueues);
 //                        }
-//                        anyFunctionFound = true;
-//                    }
-//                }
-//            }
-//        }
-//        return anyFunctionFound;
-//    }
+                        anyFunctionFound = true;
+                    }
+                }
+            }
+        }
+        return anyFunctionFound;
+    }
 
     /**
      * Inspect attributes of the given element whether they contain special attribute to define

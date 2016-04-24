@@ -63,6 +63,17 @@ public class SparkSource extends Receiver<Data> {
         streamProcessor.init();
     }
 
+    /**
+     * readResolve() is called every time an object has been deserialized. Inside of it init()
+     * method is called in order to provide right behaviour after deserialization.
+     *
+     * @return this object
+     */
+    public Object readResolve() throws Exception {
+        init();
+        return this;
+    }
+
     @Override
     public void onStart() {
         new Thread() {
