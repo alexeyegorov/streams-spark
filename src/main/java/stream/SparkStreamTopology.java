@@ -168,7 +168,7 @@ public class SparkStreamTopology {
                     log.info("--------------------------------------------------------------------------------");
                     if (ProcessListHandler.class.isInstance(handler)) {
                         // apply processors
-                        Function<Data, Data> function = (Function<Data, Data>) handler.getFunction();
+                        Function function = handler.getFunction();
                         if (!sources.containsKey(input)) {
                             log.error("Input '{}' has not been defined or no other processor is " +
                                     "filling this input queue. Define 'stream' or " +
@@ -177,7 +177,7 @@ public class SparkStreamTopology {
                             continue;
                         }
 
-                        sources.get(input).map(function);
+                        sources.get(input).map(function).print();
 //                        DataStream<Data> dataStream =
 //                                .flatMap(function)
 //                                .setParallelism(getParallelism(el));

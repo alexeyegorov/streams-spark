@@ -13,7 +13,6 @@ import stream.runtime.setup.factory.ObjectFactory;
 public abstract class SparkConfigHandler {
 
     protected final ObjectFactory objectFactory;
-    transient Object function;
 
     public SparkConfigHandler(ObjectFactory of) {
         this.objectFactory = of;
@@ -22,8 +21,8 @@ public abstract class SparkConfigHandler {
     /**
      * Handel document element for some special configuration handler.
      *
-     * @param el  element
-     * @param st  spark stream topology
+     * @param el element
+     * @param st spark stream topology
      */
     public abstract void handle(Element el, SparkStreamTopology st) throws Exception;
 
@@ -45,14 +44,5 @@ public abstract class SparkConfigHandler {
      */
     protected boolean handles(Element el, String handleable) {
         return handleable.equals(el.getNodeName().toLowerCase());
-    }
-
-    /**
-     * While handling document element some function is created (e.g. FlatMapFunction or Queue).
-     *
-     * @return function created in the handle(...) method.
-     */
-    public Object getFunction() {
-        return function;
     }
 }

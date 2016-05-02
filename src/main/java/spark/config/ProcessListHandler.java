@@ -15,7 +15,7 @@ import stream.storm.Constants;
  *
  * @author alexey
  */
-public class ProcessListHandler extends SparkConfigHandler {
+public class ProcessListHandler extends SparkFunctionConfigHandler {
 
     static Logger log = LoggerFactory.getLogger(ProcessListHandler.class);
 

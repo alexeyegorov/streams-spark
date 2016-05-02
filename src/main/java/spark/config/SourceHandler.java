@@ -19,7 +19,7 @@ import stream.storm.Constants;
  *
  * @author alexey
  */
-public class SourceHandler extends SparkConfigHandler {
+public class SourceHandler extends SparkSourceConfigHandler {
 
     static Logger log = LoggerFactory.getLogger(SourceHandler.class);
 
