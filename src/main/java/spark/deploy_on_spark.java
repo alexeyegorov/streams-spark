@@ -59,7 +59,16 @@ public class deploy_on_spark {
         log.info("Decoded XML is: {}", XMLUtils.toString(decxml));
 
         SparkConf sparkConf = new SparkConf().setAppName(SparkStreamTopology.getAppId(doc)).setMaster("local[2]");
-        JavaStreamingContext jsc = new JavaStreamingContext(sparkConf, Durations.milliseconds(500));
+
+        String attribute = doc.getDocumentElement().getAttribute(Constants.SPARK_BATCH_INTERVAL);
+        long interval;
+        try {
+            interval = Long.parseLong(attribute);
+        } catch (Exception exc) {
+            interval = 1000;
+        }
+
+        JavaStreamingContext jsc = new JavaStreamingContext(sparkConf, Durations.milliseconds(interval));
 
         SparkStreamTopology sparkStreamTopology = new SparkStreamTopology(doc, jsc);
 
