@@ -6,7 +6,7 @@ import stream.SparkStreamTopology;
 import stream.runtime.setup.factory.ObjectFactory;
 
 /**
- * Abstract class for Flink configuration handlers
+ * Abstract class for Spark configuration handlers
  *
  * @author alexey
  */

@@ -33,13 +33,6 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
 
     static Logger log = LoggerFactory.getLogger(SparkProcessList.class);
 
-
-    //TODO: how does this work in a real cluster?!
-    /**
-     * Number of workers to be used for performance measuring of each worker
-     */
-    static int THREAD_NUMBER;
-
     /**
      * List of queues
      */
@@ -111,7 +104,6 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
     public Data call(Data data) throws Exception {
         if (data != null) {
             data = process.process(data);
-            log.info("SPARKPROCLIST");
 
             // go through all queues and collect written data items
 //            for (SparkQueue q : flinkQueues) {

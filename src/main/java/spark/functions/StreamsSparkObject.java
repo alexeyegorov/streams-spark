@@ -2,8 +2,8 @@ package spark.functions;
 
 /**
  * Abstract class with an implemented readResolve() and abstract init() methods. This is needed
- * as Flink serializes everything before sending the packaged to the  in order to support
- * serialization inside of Flink.
+ * as Spark serializes everything before sending the packaged to the  in order to support
+ * serialization inside of Spark.
  *
  * @author alexey
  */

@@ -26,29 +26,10 @@ package stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 import stream.runtime.DependencyInjection;
-import stream.runtime.setup.factory.ObjectFactory;
 import stream.runtime.setup.handler.PropertiesHandler;
-import stream.storm.Constants;
-import stream.storm.config.BoltHandler;
-import stream.storm.config.ConfigHandler;
-import stream.storm.config.ProcessHandler;
-import stream.storm.config.SpoutHandler;
-import stream.storm.config.StreamHandler;
 import stream.util.Variables;
-import stream.util.XMLUtils;
 
 /**
  * @author Christian Bockermann &lt;christian.bockermann@udo.edu&gt;
