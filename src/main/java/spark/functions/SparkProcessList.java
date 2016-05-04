@@ -4,15 +4,14 @@ import org.apache.spark.api.java.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import spark.ServiceInjection;
 import spark.Utils;
+import stream.Constants;
 import stream.Data;
 import stream.ProcessContext;
 import stream.Processor;
@@ -21,7 +20,6 @@ import stream.SparkStreamTopology;
 import stream.StatefulProcessor;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.runtime.setup.factory.ProcessorFactory;
-import stream.Constants;
 import stream.util.Variables;
 
 /**
@@ -42,7 +40,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
     /**
      * List of services
      */
-//    private List<SparkService> flinkServices;
+    private List<SparkService> sparkServices;
 
     /**
      * List of processors to be executed
@@ -87,7 +85,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
 //        }
 
         // add services
-//        this.flinkServices = streamTopology.flinkServices;
+        this.sparkServices = streamTopology.sparkServices;
 
         try {
             createProcess();
@@ -149,8 +147,8 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
 //        QueueInjection queueInjection = new QueueInjection(flinkQueues);
 //        pf.addCreationHandler(queueInjection);
 //
-//        ServiceInjection serviceInjection = new ServiceInjection(flinkServices);
-//        pf.addCreationHandler(serviceInjection);
+        ServiceInjection serviceInjection = new ServiceInjection(sparkServices);
+        pf.addCreationHandler(serviceInjection);
 
         log.debug("Creating processor-list from element {}", element);
         List<Processor> list = pf.createNestedProcessors(element);

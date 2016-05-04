@@ -12,7 +12,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 import javax.xml.transform.OutputKeys;
@@ -21,7 +23,9 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import spark.config.ProcessListHandler;
+import spark.config.ServiceHandler;
 import spark.config.SourceHandler;
+import spark.functions.SparkService;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.util.Variables;
 import stream.util.XIncluder;
@@ -47,7 +51,8 @@ public class SparkStreamTopology {
     /**
      * List of services
      */
-//    public List<SparkService> flinkServices = new ArrayList<>(0);
+    public List<SparkService> sparkServices = new ArrayList<>(0);
+
     public SparkStreamTopology(Document doc, JavaStreamingContext jsc) {
         this.doc = doc;
         this.jsc = jsc;
@@ -84,7 +89,7 @@ public class SparkStreamTopology {
         variables.addVariables(StreamTopology.handleProperties(doc, variables));
 
         // handle <service.../>
-//        initFlinkServices(doc);
+        initFlinkServices(doc);
 
         // create stream sources (multiple are possible)
         HashMap<String, JavaReceiverInputDStream<Data>> sources = initSparkSources();
@@ -111,23 +116,23 @@ public class SparkStreamTopology {
         jsc.awaitTermination();
     }
 
-//    /**
-//     * Find all queues and wrap them in FlinkQueues.
-//     *
-//     * @param doc XML document
-//     */
-//    private void initFlinkServices(Document doc) throws Exception {
-//        NodeList serviceList = doc.getDocumentElement().getElementsByTagName("service");
-//        ServiceHandler serviceHandler = new ServiceHandler(ObjectFactory.newInstance());
-//        for (int iq = 0; iq < serviceList.getLength(); iq++) {
-//            Element element = (Element) serviceList.item(iq);
-//            if (serviceHandler.handles(element)) {
-//                serviceHandler.handle(element, this);
-//                SparkService flinkService = (SparkService) serviceHandler.getFunction();
-//                flinkServices.add(flinkService);
-//            }
-//        }
-//    }
+    /**
+     * Find all queues and wrap them in FlinkQueues.
+     *
+     * @param doc XML document
+     */
+    private void initFlinkServices(Document doc) throws Exception {
+        NodeList serviceList = doc.getDocumentElement().getElementsByTagName("service");
+        ServiceHandler serviceHandler = new ServiceHandler(ObjectFactory.newInstance());
+        for (int iq = 0; iq < serviceList.getLength(); iq++) {
+            Element element = (Element) serviceList.item(iq);
+            if (serviceHandler.handles(element)) {
+                serviceHandler.handle(element, this);
+                SparkService sparkService = serviceHandler.getFunction();
+                sparkServices.add(sparkService);
+            }
+        }
+    }
 
     /**
      * Find ProcessorLists and handle them to become FlatMap functions.
