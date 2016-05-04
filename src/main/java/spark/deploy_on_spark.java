@@ -10,6 +10,7 @@ import org.w3c.dom.Document;
 import java.io.File;
 import java.net.URL;
 
+import stream.Constants;
 import stream.DocumentEncoder;
 import stream.SparkStreamTopology;
 import stream.util.XMLUtils;

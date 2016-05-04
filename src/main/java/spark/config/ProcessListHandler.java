@@ -7,7 +7,7 @@ import org.w3c.dom.Element;
 import spark.functions.SparkProcessList;
 import stream.SparkStreamTopology;
 import stream.runtime.setup.factory.ObjectFactory;
-import stream.storm.Constants;
+import stream.Constants;
 
 /**
  * Configuration handler for list of processors. Method handle(...) creates FlatMapFunction to
