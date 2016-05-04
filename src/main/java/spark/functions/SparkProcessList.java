@@ -89,7 +89,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
 //        this.flinkServices = streamTopology.flinkServices;
 
         try {
-            process = createProcess();
+            createProcess();
         } catch (Exception e) {
             log.error("Error while creating process\n" + e.getMessage());
             e.printStackTrace();
@@ -137,6 +137,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
      * @return list of processors inside a function
      */
     protected ProcessorList createProcess() throws Exception {
+        ProcessorList process;
         ObjectFactory obf = ObjectFactory.newInstance();
         obf.addVariables(variables);
         ProcessorFactory pf = new ProcessorFactory(obf);
