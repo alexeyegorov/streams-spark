@@ -23,7 +23,6 @@ import javax.xml.transform.stream.StreamResult;
 import spark.config.ProcessListHandler;
 import spark.config.SourceHandler;
 import stream.runtime.setup.factory.ObjectFactory;
-import stream.storm.Constants;
 import stream.util.Variables;
 import stream.util.XIncluder;
 
@@ -97,8 +96,7 @@ public class SparkStreamTopology {
         // create all possible queues
 //        initFlinkQueues(doc);
 
-        JavaDStream<Long> data = sources.get("data").count();
-        data.print();
+//        JavaDStream<Long> data = sources.get("data").count();
         // create processor list handler and apply it to ProcessorLists
         return initSparkFunctions(doc, sources);
     }
@@ -167,8 +165,6 @@ public class SparkStreamTopology {
                     String input = el.getAttribute("input");
                     log.info("--------------------------------------------------------------------------------");
                     if (ProcessListHandler.class.isInstance(handler)) {
-                        // apply processors
-                        Function function = handler.getFunction();
                         if (!sources.containsKey(input)) {
                             log.error("Input '{}' has not been defined or no other processor is " +
                                     "filling this input queue. Define 'stream' or " +
@@ -177,7 +173,11 @@ public class SparkStreamTopology {
                             continue;
                         }
 
-                        sources.get(input).map(function).print();
+                        // apply processors
+                        Function<Data, Data> function = handler.getFunction();
+
+                        JavaDStream<Data> map = sources.get(input).map(function);
+                        map.print();
 //                        DataStream<Data> dataStream =
 //                                .flatMap(function)
 //                                .setParallelism(getParallelism(el));
