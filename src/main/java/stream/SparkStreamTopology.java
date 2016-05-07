@@ -15,7 +15,6 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.TransformerFactory;
@@ -24,8 +23,10 @@ import javax.xml.transform.stream.StreamResult;
 
 import spark.Utils;
 import spark.config.ProcessListHandler;
+import spark.config.QueueHandler;
 import spark.config.ServiceHandler;
 import spark.config.SourceHandler;
+import spark.functions.SparkQueue;
 import spark.functions.SparkService;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.util.Variables;
@@ -47,7 +48,7 @@ public class SparkStreamTopology {
     /**
      * List of queues used for inter-process communication.
      */
-//    public List<SparkQueue> flinkQueues = new ArrayList<>(0);
+    public List<SparkQueue> sparkQueues = new ArrayList<>(0);
 
     /**
      * List of services
@@ -100,7 +101,7 @@ public class SparkStreamTopology {
         }
 
         // create all possible queues
-//        initFlinkQueues(doc);
+        initSparkQueues(doc);
 
 //        JavaDStream<Long> data = sources.get("data").count();
         // create processor list handler and apply it to ProcessorLists
@@ -244,24 +245,24 @@ public class SparkStreamTopology {
         return sources;
     }
 
-//    /**
-//     * Find all queues and wrap them in FlinkQueues.
-//     *
-//     * @param doc XML document
-//     */
-//    private void initFlinkQueues(Document doc) throws Exception {
-//        NodeList queueList = doc.getDocumentElement().getElementsByTagName("queue");
-//        ObjectFactory of = ObjectFactory.newInstance();
-//        QueueHandler queueHandler = new QueueHandler(of);
-//        for (int iq = 0; iq < queueList.getLength(); iq++) {
-//            Element element = (Element) queueList.item(iq);
-//            if (queueHandler.handles(element)) {
-//                queueHandler.handle(element, this);
-//                SparkQueue flinkQueue = (SparkQueue) queueHandler.getFunction();
-//                flinkQueues.add(flinkQueue);
-//            }
-//        }
-//    }
+    /**
+     * Find all queues and wrap them in FlinkQueues.
+     *
+     * @param doc XML document
+     */
+    private void initSparkQueues(Document doc) throws Exception {
+        NodeList queueList = doc.getDocumentElement().getElementsByTagName("queue");
+        ObjectFactory of = ObjectFactory.newInstance();
+        QueueHandler queueHandler = new QueueHandler(of);
+        for (int iq = 0; iq < queueList.getLength(); iq++) {
+            Element element = (Element) queueList.item(iq);
+            if (queueHandler.handles(element)) {
+                queueHandler.handle(element, this);
+                SparkQueue sparkQueue = queueHandler.getFunction();
+                sparkQueues.add(sparkQueue);
+            }
+        }
+    }
 
 //    /**
 //     * For a list of processors enqueueing items split the DataStream and put the selected new data

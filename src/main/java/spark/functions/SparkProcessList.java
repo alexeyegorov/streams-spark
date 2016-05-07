@@ -35,7 +35,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
     /**
      * List of queues
      */
-//    private List<SparkQueue> flinkQueues;
+//    private List<SparkQueue> sparkQueues;
 
     /**
      * List of services
@@ -77,10 +77,10 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
 
         // add only queues that are used in this ProcessorList
 //        List<String> listOfOutputQueues = getListOfOutputQueues();
-//        flinkQueues = new ArrayList<>(0);
-//        for (SparkQueue queue : streamTopology.flinkQueues) {
+//        sparkQueues = new ArrayList<>(0);
+//        for (SparkQueue queue : streamTopology.sparkQueues) {
 //            if (listOfOutputQueues.contains(queue.getQueueName().toLowerCase())) {
-//                flinkQueues.add(queue);
+//                sparkQueues.add(queue);
 //            }
 //        }
 
@@ -105,7 +105,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
             data = process.process(data);
 
             // go through all queues and collect written data items
-//            for (SparkQueue q : flinkQueues) {
+//            for (SparkQueue q : sparkQueues) {
 //                while (q.getSize() > 0) {
 //                    collector.collect(q.read());
 //                }
@@ -144,7 +144,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
         // The handler injects wrappers for any QueueService accesses, thus
         // effectively doing the queue-flow injection
         //
-//        QueueInjection queueInjection = new QueueInjection(flinkQueues);
+//        QueueInjection queueInjection = new QueueInjection(sparkQueues);
 //        pf.addCreationHandler(queueInjection);
 //
         ServiceInjection serviceInjection = new ServiceInjection(sparkServices);
