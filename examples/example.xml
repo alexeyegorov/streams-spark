@@ -1,4 +1,4 @@
-<container id="example" spark-batch-interval="1000">
+<container id="example" spark-batch-interval="500" spark-master-node="local[2]">
 
 	<!--<stream id="data" class="stream.generator.RandomStream" limit="10000" />-->
 	<property name="infile" value="hdfs://ls8cb01.cs.uni-dortmund.de:9000/FACT/simulation/" />

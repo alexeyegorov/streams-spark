@@ -1,6 +1,7 @@
 package spark;
 
 import org.apache.spark.SparkConf;
+import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
@@ -58,8 +59,17 @@ public class deploy_on_spark {
         Document decxml = DocumentEncoder.decodeDocument(enc);
         log.info("Decoded XML is: {}", XMLUtils.toString(decxml));
 
-        SparkConf sparkConf = new SparkConf().setAppName(SparkStreamTopology.getAppId(doc)).setMaster("local[2]");
+        SparkConf sparkConf = new SparkConf();
 
+        // set app name
+        String appId = SparkStreamTopology.getAppId(doc);
+        sparkConf.setAppName(appId);
+
+        // set master node
+        String masterNode = doc.getDocumentElement().getAttribute(Constants.SPARK_MASTER_NODE);
+        sparkConf.setMaster(masterNode);
+
+        // set batch interval
         String attribute = doc.getDocumentElement().getAttribute(Constants.SPARK_BATCH_INTERVAL);
         long interval;
         try {
@@ -67,8 +77,12 @@ public class deploy_on_spark {
         } catch (Exception exc) {
             interval = 1000;
         }
+        Duration milliseconds = Durations.milliseconds(interval);
 
-        JavaStreamingContext jsc = new JavaStreamingContext(sparkConf, Durations.milliseconds(interval));
+        log.info("Creating app '{}' with master node mode '{}' and batch interval of '{}' ms.",
+                appId, masterNode, interval);
+
+        JavaStreamingContext jsc = new JavaStreamingContext(sparkConf, milliseconds);
 
         SparkStreamTopology sparkStreamTopology = new SparkStreamTopology(doc, jsc);
 
