@@ -79,15 +79,15 @@ public class ServiceInjection implements ProcessorFactory.ProcessorCreationHandl
     /**
      * Collect declared field from current class and its superclasses.
      *
-     * @param p processor with declared fields
+     * @param processor processor with declared fields
      * @return list of found declared fields
      */
-    private List<Field> getDeclaredFields(Processor p) {
+    private List<Field> getDeclaredFields(Processor processor) {
         //TODO what if several superclasses?
-        Field[] declaredFields = p.getClass().getDeclaredFields();
+        Field[] declaredFields = processor.getClass().getDeclaredFields();
         List<Field> fields = new ArrayList<>(0);
         fields.addAll(Arrays.asList(declaredFields));
-        Class<?> serv = p.getClass();
+        Class<?> serv = processor.getClass();
         while (serv.getSuperclass() != Object.class) {
             Class<?> superclass = serv.getSuperclass();
             Field[] declaredFields1 = superclass.getDeclaredFields();
