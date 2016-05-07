@@ -22,6 +22,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import spark.Utils;
 import spark.config.ProcessListHandler;
 import spark.config.ServiceHandler;
 import spark.config.SourceHandler;
@@ -86,7 +87,7 @@ public class SparkStreamTopology {
                 new StreamResult(new OutputStreamWriter(System.out, "UTF-8")));
 
         // handle properties and save them to variables
-        variables.addVariables(StreamTopology.handleProperties(doc, variables));
+        variables.addVariables(Utils.handleProperties(doc, variables));
 
         // handle <service.../>
         initFlinkServices(doc);
