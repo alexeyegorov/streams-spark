@@ -62,7 +62,7 @@ public class deploy_on_spark {
         SparkConf sparkConf = new SparkConf();
 
         // set app name
-        String appId = SparkStreamTopology.getAppId(doc);
+        String appId = Utils.getAppId(doc);
         sparkConf.setAppName(appId);
 
         // set master node
