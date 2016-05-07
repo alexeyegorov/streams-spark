@@ -189,6 +189,8 @@ public class SparkStreamTopology {
 //                                .flatMap(function)
 //                                .setParallelism(getParallelism(el));
 //
+
+                        //TODO split data stream depending on output queues
 //                        // detect output queues
 //                        List<String> outputQueues = function.getListOfOutputQueues();
 
