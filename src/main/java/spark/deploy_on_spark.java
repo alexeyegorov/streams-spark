@@ -17,7 +17,7 @@ import stream.SparkStreamTopology;
 import stream.util.XMLUtils;
 
 /**
- * Build and run Flink topology locally or deploy jar with this class as mainclass to your cluster.
+ * Build and run Spark topology locally or deploy jar with this class as mainclass to your cluster.
  *
  * @author alexey
  */
@@ -69,6 +69,8 @@ public class deploy_on_spark {
         String masterNode = doc.getDocumentElement().getAttribute(Constants.SPARK_MASTER_NODE);
         sparkConf.setMaster(masterNode);
 
+        // switch the compression from SNAPPY to LZF due to problems with the snappy library
+        sparkConf.set("spark.io.compression.codec", "org.apache.spark.io.LZFCompressionCodec");
         // set batch interval
         String attribute = doc.getDocumentElement().getAttribute(Constants.SPARK_BATCH_INTERVAL);
         long interval;
@@ -88,7 +90,7 @@ public class deploy_on_spark {
             sparkStreamTopology.addListener();
             sparkStreamTopology.executeTopology();
         } else {
-            log.info("Do not execute as there were errors while building the topology.");
+            log.info("Do not execute the topology as there were errors while building the topology.");
         }
     }
 
