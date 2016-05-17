@@ -9,6 +9,7 @@ import java.net.InetAddress;
 import java.util.List;
 import java.util.UUID;
 
+import spark.BatchFinishListener;
 import spark.ServiceInjection;
 import spark.Utils;
 import stream.Constants;
@@ -87,6 +88,8 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
         // add services
         this.sparkServices = streamTopology.sparkServices;
 
+        // create process to initialize processors in the list, but do not save it
+        // as it will be reinitialized after deserialization process
         try {
             createProcess();
         } catch (Exception e) {
@@ -100,25 +103,10 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
     }
 
     @Override
-    public Data call(Data data) throws Exception {
-        if (data != null) {
-            data = process.process(data);
-
-            // go through all queues and collect written data items
-//            for (SparkQueue q : sparkQueues) {
-//                while (q.getSize() > 0) {
-//                    collector.collect(q.read());
-//                }
-//            }
-        }
-        return data;
-    }
-
-    @Override
     protected void init() throws Exception {
         // add process identifier using localhost name and some random unique identifier
         String id = element.getAttribute("id") + "@"
-                + InetAddress.getLocalHost().getCanonicalHostName() + "-" + UUID.randomUUID();
+                + InetAddress.getLocalHost().getHostName().hashCode();
         element.setAttribute("id", id);
         context.set("process", id);
         process = createProcess();
@@ -127,6 +115,10 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
                 ((StatefulProcessor) p).init(context);
             }
         }
+
+        // register this object to BatchFinishListener that calls finish at the end of the batch
+        BatchFinishListener.registerProcessor(this);
+
         log.info("Initializing ProcessorList {} with element.id {}", process, element.getAttribute("id"));
     }
 
@@ -159,12 +151,30 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
         return process;
     }
 
+    @Override
+    public Data call(Data data) throws Exception {
+        if (data != null) {
+            data = process.process(data);
+
+            //TODO add items collected through queues
+            // go through all queues and collect written data items
+//            for (SparkQueue q : sparkQueues) {
+//                while (q.getSize() > 0) {
+//                    collector.collect(q.read());
+//                }
+//            }
+        }
+
+        return data;
+    }
+
     /**
-     * Go through the list of processors and check which queues are used as their output.
-     *
-     * @return list of queues as string
+     * Perform finish method on internal processor list object.
      */
-    public List<String> getListOfOutputQueues() {
-        return Utils.getOutputQueues(this.element);
+    public void finish() throws Exception {
+        if (process != null) {
+            process.finish();
+            log.info("Call finish on processor list.");
+        }
     }
 }

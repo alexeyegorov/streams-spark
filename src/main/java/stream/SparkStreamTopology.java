@@ -23,6 +23,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import spark.BatchFinishListener;
 import spark.Utils;
 import spark.config.ProcessListHandler;
 import spark.config.QueueHandler;
@@ -272,7 +273,15 @@ public class SparkStreamTopology {
         }
     }
 
-//    /**
+    /**
+     * Register BatchFinishListener to topology.
+     */
+    public void addListener() {
+        jsc.addStreamingListener(new BatchFinishListener());
+        log.info("Added listener to detect the end of each batch.");
+    }
+
+    //    /**
 //     * For a list of processors enqueueing items split the DataStream and put the selected new data
 //     * streams into the hashmap.
 //     *

@@ -85,6 +85,7 @@ public class deploy_on_spark {
         SparkStreamTopology sparkStreamTopology = new SparkStreamTopology(doc, sparkConf, milliseconds);
 
         if (sparkStreamTopology.createTopology()) {
+            sparkStreamTopology.addListener();
             sparkStreamTopology.executeTopology();
         } else {
             log.info("Do not execute as there were errors while building the topology.");
