@@ -51,10 +51,10 @@ public class QueueInjection implements ProcessorCreationHandler {
     /**
      * List of FlinkQueues used as wrapper for real queue implementations.
      */
-    private final List<SparkQueue> flinkQueues;
+    private final List<SparkQueue> sparkQueues;
 
-    public QueueInjection(List<SparkQueue> flinkQueues) {
-        this.flinkQueues = flinkQueues;
+    public QueueInjection(List<SparkQueue> sparkQueues) {
+        this.sparkQueues = sparkQueues;
     }
 
     public static String getQueueSetterName(Method m) {
@@ -130,7 +130,7 @@ public class QueueInjection implements ProcessorCreationHandler {
      * @return SparkQueue
      */
     private SparkQueue getSparkQueue(String name) {
-        for (SparkQueue queue : flinkQueues) {
+        for (SparkQueue queue : sparkQueues) {
             if (queue.getQueueName().equals(name)) {
                 return queue;
             }
