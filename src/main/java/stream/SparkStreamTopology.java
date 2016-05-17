@@ -224,24 +224,28 @@ public class SparkStreamTopology {
         //TODO use something more simple?!
         for (int is = 0; is < streamList.getLength(); is++) {
             Element item = (Element) streamList.item(is);
-            if (sourceHandler.handles(item)) {
-                // name of the source
-                String id = item.getAttribute("id");
+            if (!item.getParentNode().getNodeName().equals("stream")) {
+                if (sourceHandler.handles(item)) {
+                    // name of the source
+                    String id = item.getAttribute("id");
 
-                // handle the source and create data stream for it
-                try {
-                    sourceHandler.handle(item, this);
-                } catch (Exception e) {
-                    log.error("Error while handling the source for item {}", item);
-                    return null;
+                    // handle the source and create data stream for it
+                    try {
+                        sourceHandler.handle(item, this);
+                    } catch (Exception e) {
+                        log.error("Error while handling the source for item {}", item);
+                        return null;
+                    }
+                    JavaReceiverInputDStream<Data> receiverStream = jsc.receiverStream(sourceHandler.getFunction());
+
+                    // put this source into the hashmap
+                    sources.put(id, receiverStream);
+                    log.info("'{}' added as stream source.", id);
+                } else {
+                    log.debug("Source handler doesn't handle {}", item.toString());
                 }
-                JavaReceiverInputDStream<Data> receiverStream = jsc.receiverStream(sourceHandler.getFunction());
-
-                // put this source into the hashmap
-                sources.put(id, receiverStream);
-                log.info("'{}' added as stream source.", id);
             } else {
-                log.debug("Source handler doesn't handle {}", item.toString());
+                log.info("Found embedded/multi stream.");
             }
         }
         return sources;
