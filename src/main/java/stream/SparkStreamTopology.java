@@ -1,6 +1,8 @@
 package stream;
 
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -55,9 +57,9 @@ public class SparkStreamTopology {
      */
     public List<SparkService> sparkServices = new ArrayList<>(0);
 
-    public SparkStreamTopology(Document doc, JavaStreamingContext jsc) {
+    public SparkStreamTopology(Document doc, SparkConf sparkConf, Duration milliseconds) {
         this.doc = doc;
-        this.jsc = jsc;
+        this.jsc = new JavaStreamingContext(sparkConf, milliseconds);
     }
 
     public Variables getVariables() {

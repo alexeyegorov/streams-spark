@@ -82,9 +82,7 @@ public class deploy_on_spark {
         log.info("Creating app '{}' with master node mode '{}' and batch interval of '{}' ms.",
                 appId, masterNode, interval);
 
-        JavaStreamingContext jsc = new JavaStreamingContext(sparkConf, milliseconds);
-
-        SparkStreamTopology sparkStreamTopology = new SparkStreamTopology(doc, jsc);
+        SparkStreamTopology sparkStreamTopology = new SparkStreamTopology(doc, sparkConf, milliseconds);
 
         if (sparkStreamTopology.createTopology()) {
             sparkStreamTopology.executeTopology();
