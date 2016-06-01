@@ -1,11 +1,12 @@
 package spark.functions;
 
-import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.FlatMapFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,7 +30,7 @@ import stream.util.Variables;
  *
  * @author alexey
  */
-public class SparkProcessList extends StreamsSparkObject implements Function<Data, Data> {
+public class SparkProcessList extends StreamsSparkObject implements FlatMapFunction<Data, Data> {
 
     static Logger log = LoggerFactory.getLogger(SparkProcessList.class);
 
@@ -64,6 +65,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
     protected ProcessContext context;
 
     public SparkProcessList(SparkStreamTopology streamTopology, Element el) {
+        super();
         this.variables = streamTopology.getVariables();
         this.element = el;
         String processId;
@@ -104,11 +106,22 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
 
     @Override
     protected void init() throws Exception {
+//        int numberOfCores = 1;
+//        if (variables.containsKey(Constants.SPARK_EXECUTOR_CORES)) {
+//            String s = variables.get(Constants.SPARK_EXECUTOR_CORES);
+//            numberOfCores = Integer.parseInt(s);
+//        }
+        BatchFinishListener.setNumberOfCores(1);
+        BatchFinishListener instance = BatchFinishListener.getInstance();
+        log.info("Initializing ProcessorList with BatchListener {}", instance);
+
         // add process identifier using localhost name and some random unique identifier
         String id = element.getAttribute("id") + "@"
-                + InetAddress.getLocalHost().getHostName().hashCode();
+                + InetAddress.getLocalHost().getHostName().hashCode()
+                + "::" + BatchFinishListener.getThreadNumber();
         element.setAttribute("id", id);
         context.set("process", id);
+
         process = createProcess();
         for (Processor p : process.getProcessors()) {
             if (p instanceof StatefulProcessor) {
@@ -117,9 +130,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
         }
 
         // register this object to BatchFinishListener that calls finish at the end of the batch
-        BatchFinishListener.registerProcessor(this);
-
-        log.info("Initializing ProcessorList {} with element.id {}", process, element.getAttribute("id"));
+        instance.registerProcessor(this);
     }
 
     /**
@@ -152,9 +163,11 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
     }
 
     @Override
-    public Data call(Data data) throws Exception {
+    public Iterable<Data> call(Data data) throws Exception {
+        ArrayList<Data> iterable = new ArrayList<>(0);
         if (data != null) {
             data = process.process(data);
+            iterable.add(data);
 
             //TODO add items collected through queues
             // go through all queues and collect written data items
@@ -165,7 +178,7 @@ public class SparkProcessList extends StreamsSparkObject implements Function<Dat
 //            }
         }
 
-        return data;
+        return iterable;
     }
 
     /**

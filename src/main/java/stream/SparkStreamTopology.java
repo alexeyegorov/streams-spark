@@ -1,9 +1,10 @@
 package stream;
 
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.Duration;
-import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
@@ -23,7 +24,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import spark.BatchFinishListener;
 import spark.Utils;
 import spark.config.ProcessListHandler;
 import spark.config.QueueHandler;
@@ -61,6 +61,11 @@ public class SparkStreamTopology {
     public SparkStreamTopology(Document doc, SparkConf sparkConf, Duration milliseconds) {
         this.doc = doc;
         this.jsc = new JavaStreamingContext(sparkConf, milliseconds);
+        String cores = "2";
+        if (sparkConf.contains(Constants.SPARK_EXECUTOR_CORES)) {
+            cores = sparkConf.get(Constants.SPARK_EXECUTOR_CORES);
+        }
+        variables.put(Constants.SPARK_EXECUTOR_CORES, cores);
     }
 
     public Variables getVariables() {
@@ -153,7 +158,9 @@ public class SparkStreamTopology {
         boolean anyFunctionFound = false;
 
         // create processor list handler
-        ProcessListHandler handler = new ProcessListHandler(ObjectFactory.newInstance());
+        ObjectFactory objectFactory = ObjectFactory.newInstance();
+        objectFactory.addVariables(variables);
+        ProcessListHandler handler = new ProcessListHandler(objectFactory);
 
         //TODO use getElementsByTagName?
         NodeList list = doc.getDocumentElement().getChildNodes();
@@ -184,10 +191,39 @@ public class SparkStreamTopology {
                         }
 
                         // apply processors
-                        Function<Data, Data> function = handler.getFunction();
+                        final FlatMapFunction<Data, Data> function = handler.getFunction();
 
-                        JavaDStream<Data> map = sources.get(input).map(function);
-                        map.print();
+                        final JavaReceiverInputDStream<Data> receiver = sources.get(input);
+
+                        receiver.foreachRDD(new VoidFunction<JavaRDD<Data>>() {
+                            @Override
+                            public void call(JavaRDD<Data> dataJavaRDD) throws Exception {
+                                if (!dataJavaRDD.isEmpty()) {
+
+//                                    int numberOfCores = 1;
+//                                    if (variables.containsKey(Constants.SPARK_EXECUTOR_CORES)) {
+//                                        String s = variables.get(Constants.SPARK_EXECUTOR_CORES);
+//                                        numberOfCores = Integer.parseInt(s);
+//                                    }
+//                                    BatchFinishListener.setNumberOfCores(numberOfCores);
+
+//                                    BatchFinishListener batchFinisher = BatchFinishListener.getInstance();
+//                                    batchFinisher.registerProcessor(function, v2);
+
+                                    long count = dataJavaRDD.flatMap(function).count();
+                                    log.info("Mapped {} data items.", count);
+
+//                                    Iterator<BatchUIData> iterator = receiver.context()
+//                                            .progressListener().retainedCompletedBatches().iterator();
+//                                    while (iterator.hasNext()) {
+//                                        BatchUIData next = iterator.next();
+//                                        if (next.numRecords() > 0) {
+//                                            batchFinisher.finishProcessors(next.batchTime());
+//                                        }
+//                                    }
+                                }
+                            }
+                        });
 //                        DataStream<Data> dataStream =
 //                                .flatMap(function)
 //                                .setParallelism(getParallelism(el));
@@ -255,7 +291,7 @@ public class SparkStreamTopology {
     }
 
     /**
-     * Find all queues and wrap them in FlinkQueues.
+     * Find all queues and wrap them in SparkQueues.
      *
      * @param doc XML document
      */

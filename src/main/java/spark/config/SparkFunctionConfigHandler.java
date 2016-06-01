@@ -1,5 +1,6 @@
 package spark.config;
 
+import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 
 import stream.Data;
@@ -10,7 +11,7 @@ import stream.runtime.setup.factory.ObjectFactory;
  */
 public abstract class SparkFunctionConfigHandler extends SparkConfigHandler {
 
-    transient Function<Data, Data> function;
+    transient FlatMapFunction<Data, Data> function;
 
     public SparkFunctionConfigHandler(ObjectFactory of) {
         super(of);
@@ -21,7 +22,7 @@ public abstract class SparkFunctionConfigHandler extends SparkConfigHandler {
      *
      * @return function created in the handle(...) method.
      */
-    public Function<Data, Data> getFunction() {
+    public FlatMapFunction<Data, Data> getFunction() {
         return function;
     }
 }
