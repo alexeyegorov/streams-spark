@@ -450,7 +450,7 @@
                                         </Implementation-Revision>
                                         <Specification-Title>streams-spark</Specification-Title>
                                         <Specification-Version>1.0</Specification-Version>
-                                        <main-class>spark.run</main-class>
+                                        <main-class>spark.deploy_on_spark</main-class>
                                     </manifestEntries>
                                 </transformer>
                             </transformers>
