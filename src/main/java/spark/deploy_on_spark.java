@@ -7,6 +7,7 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import java.io.File;
 import java.net.URL;
@@ -65,14 +66,34 @@ public class deploy_on_spark {
         String appId = Utils.getAppId(doc);
         sparkConf.setAppName(appId);
 
+        Element docElement = doc.getDocumentElement();
+
         // set master node
-        String masterNode = doc.getDocumentElement().getAttribute(Constants.SPARK_MASTER_NODE);
+        String masterNode = docElement.hasAttribute(Constants.SPARK_MASTER_NODE)
+                ? docElement.getAttribute(Constants.SPARK_MASTER_NODE) : "local[2]";
         sparkConf.setMaster(masterNode);
 
         // switch the compression from SNAPPY to LZF due to problems with the snappy library
         sparkConf.set("spark.io.compression.codec", "org.apache.spark.io.LZFCompressionCodec");
+
+//        sparkConf.set("spark.streaming.receiver.maxRate", "200");
+
+        // set parallelism level
+        String parallelism = docElement.hasAttribute("spark.default.parallelism")
+                ? docElement.getAttribute("spark.default.parallelism") : "2";
+        sparkConf.set("spark.default.parallelism", parallelism);
+
+        // set streaming block interval (number of tasks = batch interval / block interval)
+        String blockInterval = docElement.hasAttribute("spark-block-interval")
+                ? docElement.getAttribute("spark-block-interval") + "ms" : "200ms";
+        sparkConf.set("spark.streaming.blockInterval", blockInterval);
+
+//        sparkConf.set("spark.extraListeners", "spark.TaskFinishListener");
+//        sparkConf.set("spark.executor.memory", "3g");
+//
+//        sparkConf.set("spark.driver.memory", "4g");
         // set batch interval
-        String attribute = doc.getDocumentElement().getAttribute(Constants.SPARK_BATCH_INTERVAL);
+        String attribute = docElement.getAttribute(Constants.SPARK_BATCH_INTERVAL);
         long interval;
         try {
             interval = Long.parseLong(attribute);
@@ -81,13 +102,14 @@ public class deploy_on_spark {
         }
         Duration milliseconds = Durations.milliseconds(interval);
 
-        log.info("Creating app '{}' with master node mode '{}' and batch interval of '{}' ms.",
-                appId, masterNode, interval);
+        log.info("Creating app '{}' with master node mode '{}', batch interval of '{}' ms " +
+                "and block interval of '{}' ms",
+                appId, masterNode, interval, blockInterval);
 
         SparkStreamTopology sparkStreamTopology = new SparkStreamTopology(doc, sparkConf, milliseconds);
 
         if (sparkStreamTopology.createTopology()) {
-            sparkStreamTopology.addListener();
+//            sparkStreamTopology.addListener();
             sparkStreamTopology.executeTopology();
         } else {
             log.info("Do not execute the topology as there were errors while building the topology.");
