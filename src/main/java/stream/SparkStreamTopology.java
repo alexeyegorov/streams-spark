@@ -148,6 +148,69 @@ public class SparkStreamTopology {
     }
 
     /**
+     * Find all sources (streams) and wrap them in SparkSources.
+     */
+    private HashMap<String, JavaDStream<Data>> initSparkSources() {
+        NodeList streamList = doc.getDocumentElement().getElementsByTagName("stream");
+        if (streamList.getLength() < 1) {
+            log.debug("At least 1 stream source has to be defined.");
+            return null;
+        }
+
+        ObjectFactory of = ObjectFactory.newInstance();
+        SourceHandler sourceHandler = new SourceHandler(of);
+        HashMap<String, JavaDStream<Data>> sources = new HashMap<>(0);
+
+        //TODO use something more simple?!
+        for (int is = 0; is < streamList.getLength(); is++) {
+            Element item = (Element) streamList.item(is);
+            if (!item.getParentNode().getNodeName().equals("stream")) {
+                if (sourceHandler.handles(item)) {
+                    // name of the source
+                    String id = item.getAttribute("id");
+
+                    // handle the source and create data stream for it
+                    try {
+                        sourceHandler.handle(item, this);
+                    } catch (Exception e) {
+                        log.error("Error while handling the source for item {}", item);
+                        return null;
+                    }
+
+                    ArrayList<SparkSourceStream> functions = sourceHandler.getFunction();
+
+                    // initialize receivers
+                    List<JavaDStream<Data>> dataStreams = new ArrayList<>(functions.size());
+                    while (functions.size() > 0) {
+                        dataStreams.add(jsc.receiverStream(functions.remove(0)));
+                    }
+
+                    // unify receivers if there are more than 1
+                    JavaDStream<Data> unifiedStream;
+                    if (dataStreams.size() > 1) {
+                        unifiedStream = jsc.union(dataStreams.get(0),
+                                dataStreams.subList(1, dataStreams.size()));
+                    } else if (dataStreams.size() == 1){
+                        unifiedStream = dataStreams.remove(0);
+                    } else {
+                        log.error("NO data stream has been initialized.");
+                        return null;
+                    }
+
+                    // put this source into the hashmap
+                    sources.put(id, unifiedStream);
+                    log.info("'{}' added as stream source.", id);
+                } else {
+                    log.debug("Source handler doesn't handle {}", item.toString());
+                }
+            } else {
+                log.info("Found embedded/multi stream.");
+            }
+        }
+        return sources;
+    }
+
+    /**
      * Find ProcessorLists and handle them to become FlatMap functions.
      *
      * @param doc     XML document
@@ -230,65 +293,6 @@ public class SparkStreamTopology {
     }
 
     /**
-     * Find all sources (streams) and wrap them in SparkSources.
-     */
-    private HashMap<String, JavaDStream<Data>> initSparkSources() {
-        NodeList streamList = doc.getDocumentElement().getElementsByTagName("stream");
-        if (streamList.getLength() < 1) {
-            log.debug("At least 1 stream source has to be defined.");
-            return null;
-        }
-
-        ObjectFactory of = ObjectFactory.newInstance();
-        SourceHandler sourceHandler = new SourceHandler(of);
-        HashMap<String, JavaDStream<Data>> sources = new HashMap<>(0);
-
-        //TODO use something more simple?!
-        for (int is = 0; is < streamList.getLength(); is++) {
-            Element item = (Element) streamList.item(is);
-            if (!item.getParentNode().getNodeName().equals("stream")) {
-                if (sourceHandler.handles(item)) {
-                    // name of the source
-                    String id = item.getAttribute("id");
-
-                    // handle the source and create data stream for it
-                    try {
-                        sourceHandler.handle(item, this);
-                    } catch (Exception e) {
-                        log.error("Error while handling the source for item {}", item);
-                        return null;
-                    }
-                    ArrayList<SparkSourceStream> functions = sourceHandler.getFunction();
-
-                    List<JavaDStream<Data>> dataStreams = new ArrayList<>(functions.size());
-                    while (functions.size() > 0) {
-                        dataStreams.add(jsc.receiverStream(functions.remove(0)));
-                    }
-
-                    JavaDStream<Data> unifiedStream;
-                    if (dataStreams.size() > 1) {
-                         unifiedStream = jsc.union(dataStreams.get(0),
-                                dataStreams.subList(1, dataStreams.size()));
-                    } else if (dataStreams.size() == 1){
-                        unifiedStream = dataStreams.remove(0);
-                    } else {
-                        log.error("NO data stream has been initialized.");
-                        return null;
-                    }
-                    // put this source into the hashmap
-                    sources.put(id, unifiedStream);
-                    log.info("'{}' added as stream source.", id);
-                } else {
-                    log.debug("Source handler doesn't handle {}", item.toString());
-                }
-            } else {
-                log.info("Found embedded/multi stream.");
-            }
-        }
-        return sources;
-    }
-
-    /**
      * Find all queues and wrap them in SparkQueues.
      *
      * @param doc XML document
@@ -311,8 +315,14 @@ public class SparkStreamTopology {
      * Register BatchFinishListener to topology.
      */
     public void addListener() {
-        jsc.addStreamingListener(new BatchFinishListener());
-        log.info("Added listener to detect the end of each batch.");
+//        int numberOfCores;
+//        if (variables.containsKey("spark.executor.cores")){
+//            numberOfCores = Integer.parseInt(variables.get("spark.executor.cores"));
+//        } else {
+//            numberOfCores = 2;
+//        }
+//        jsc.addStreamingListener(new BatchFinishListener(numberOfCores));
+//        log.info("Added listener to detect the end of each batch.");
     }
 
     //    /**
