@@ -3,11 +3,9 @@ package stream;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaDStream;
-import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +31,6 @@ import spark.config.ServiceHandler;
 import spark.config.SourceHandler;
 import spark.functions.SparkQueue;
 import spark.functions.SparkService;
-import spark.functions.SparkSource;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.util.Variables;
 import stream.util.XIncluder;
@@ -48,6 +45,7 @@ public class SparkStreamTopology {
     static Logger log = LoggerFactory.getLogger(SparkStreamTopology.class);
 
     public final Variables variables = new Variables();
+    private final long batchInterval;
     private Document doc;
     private JavaStreamingContext jsc;
 
@@ -64,6 +62,7 @@ public class SparkStreamTopology {
     public SparkStreamTopology(Document doc, SparkConf sparkConf, Duration milliseconds) {
         this.doc = doc;
         this.jsc = new JavaStreamingContext(sparkConf, milliseconds);
+        this.batchInterval = milliseconds.milliseconds();
         String cores = "2";
         if (sparkConf.contains(Constants.SPARK_EXECUTOR_CORES)) {
             cores = sparkConf.get(Constants.SPARK_EXECUTOR_CORES);
@@ -190,7 +189,7 @@ public class SparkStreamTopology {
                     if (dataStreams.size() > 1) {
                         unifiedStream = jsc.union(dataStreams.get(0),
                                 dataStreams.subList(1, dataStreams.size()));
-                    } else if (dataStreams.size() == 1){
+                    } else if (dataStreams.size() == 1) {
                         unifiedStream = dataStreams.remove(0);
                     } else {
                         log.error("NO data stream has been initialized.");
@@ -256,11 +255,41 @@ public class SparkStreamTopology {
                             continue;
                         }
 
-                        // apply processors
+                        // retrieve the processor function
                         final FlatMapFunction<Data, Data> function = handler.getFunction();
 
-                        final JavaDStream<Data> receiver = sources.get(input);
+                        // retrieve the incoming data stream
+                        JavaDStream<Data> receiver = sources.get(input);
 
+                        // handle the case of repartitioning (using previous number of
+                        // partitions defined through batch and block interval)
+                        if (el.hasAttribute(stream.Constants.NUM_WORKERS)) {
+                            String copiesStr = el.getAttribute(stream.storm.Constants.NUM_WORKERS);
+                            SparkConf conf = jsc.ssc().conf();
+                            if (conf.contains(Constants.SPARK_STREAMING_BLOCK_INTERVAL)) {
+                                String s = conf.get(Constants.SPARK_STREAMING_BLOCK_INTERVAL);
+                                s = s.substring(0, s.length() - 2);
+
+                                int blockInterval = Integer.parseInt(s);
+                                int copies = Integer.parseInt(copiesStr);
+
+                                // number of partitions used so far
+                                double numPartitions = ((double) batchInterval) / blockInterval;
+
+                                // difference between previous number of partitions to the
+                                // suggested new number of partitions
+                                double partitionDiff = Math.abs((numPartitions - copies) / numPartitions);
+
+                                // repartition DStream if the new level of parallelism is highly
+                                // different from the old level
+                                if (partitionDiff >= 0.2) {
+                                    //TODO use better constant?
+                                    receiver = receiver.repartition(copies);
+                                }
+                            }
+                        }
+
+                        //FIXME why does MAP function skips some data items? would flatMap work?
                         receiver.foreachRDD(new VoidFunction<JavaRDD<Data>>() {
                             @Override
                             public void call(JavaRDD<Data> dataJavaRDD) throws Exception {
