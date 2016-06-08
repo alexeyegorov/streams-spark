@@ -17,14 +17,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import stream.annotations.Parameter;
+import stream.data.DataFactory;
+import stream.data.SequenceID;
 import stream.io.AbstractStream;
 import stream.io.SourceURL;
-import stream.io.multi.AbstractMultiStream;
 
 /**
  * @author alexey
  */
-public class IterateFilesStream extends AbstractMultiStream {
+public class IterateFilesStream extends ParallelSparkMultiStream {
 
     static Logger log = LoggerFactory.getLogger(IterateFilesStream.class);
 
@@ -44,12 +45,29 @@ public class IterateFilesStream extends AbstractMultiStream {
     private int countReadNext;
     private FileSystem fs;
 
+    /**
+     * Number of all initialiazed copies.
+     */
+    private int numberOfCopies = 1;
+
+    /**
+     * Number of this copy instance.
+     */
+    private int copyNumber = 0;
+
     public IterateFilesStream() {
         super();
     }
 
+
     public IterateFilesStream(SourceURL url) {
         super(url);
+    }
+
+    @Override
+    public void handleParallelism(int instanceNumber, int copiesNumber) {
+        this.copyNumber = instanceNumber;
+        this.numberOfCopies = copiesNumber;
     }
 
     /**
@@ -77,8 +95,8 @@ public class IterateFilesStream extends AbstractMultiStream {
 
         // initialize variables
         failedFilesList = new ArrayList<>(0);
-        fileCounter = 1;
         countReadNext = 1;
+        fileCounter = 1;
 
         // retrieve file system that contains all information about HDFS file system
         fs = FileSystem.get(new URI(this.url.toString()), new Configuration());
@@ -95,12 +113,40 @@ public class IterateFilesStream extends AbstractMultiStream {
         fileStatuses = retrieveFilesRecursively(path);
         log.info("Found {} files in the HDFS folder.", this.fileStatuses.size());
 
+        Long maxFileNumber = (long) fileStatuses.size();
+        if (limit < maxFileNumber) {
+            maxFileNumber = limit;
+        }
+
+        if (maxFileNumber < numberOfCopies) {
+            log.error("Number of instances must be less or equal to the number of files to be " +
+                    "read. Using {} files for this run.", numberOfCopies);
+            maxFileNumber = (long) numberOfCopies;
+        }
+
+        // block size for each stream instance
+        long blockSize = maxFileNumber / numberOfCopies;
+
+        // begin reading from the beginning of a certain block
+        int startStreamFile = (int) (blockSize * copyNumber);
+
+        // stop reading at the end of the bloc, the last block may contain some more values
+        int stopStreamFile = (int) (copyNumber == numberOfCopies - 1
+                ? maxFileNumber : startStreamFile + blockSize);
+
+        // define new end of the file
+        limit = (long) (stopStreamFile - startStreamFile);
+
+        log.info("Initializing IterateFilesStream for instance {} of {}, begin with {} up to {}.",
+                copyNumber, numberOfCopies, startStreamFile, stopStreamFile);
+
+        this.fileStatuses = new ArrayList<>(this.fileStatuses.subList(startStreamFile, stopStreamFile));
+
         if (stream == null && additionOrder != null) {
             stream = (AbstractStream) streams.get(additionOrder.get(0));
             stream.setUrl(new SourceURL(this.fileStatuses.remove(0).getPath().toString()));
             stream.init();
             log.info("Streaming file {}: {}", fileCounter, stream.getUrl().toString());
-            fileCounter++;
         }
     }
 
@@ -165,6 +211,35 @@ public class IterateFilesStream extends AbstractMultiStream {
     }
 
     @Override
+    public synchronized Data read() throws Exception {
+        if (closed || (limit > 0 && count >= limit))
+            return null;
+
+        Data datum = readNext();
+        if (datum == null) {
+            log.debug("End-of-stream reached!");
+            return null;
+        }
+
+        if (this.id != null)
+            datum.put(SOURCE_KEY, this.id);
+
+        if (this.sequenceKey != null) {
+            SequenceID next = this.seqId.getAndIncrement();
+            datum.put(sequenceKey, next);
+        }
+        if (prefix != null && !prefix.trim().isEmpty()) {
+            Data prefixed = DataFactory.create();
+            for (String key : datum.keySet()) {
+                prefixed.put(prefix + ":" + key, datum.get(key));
+            }
+            datum = prefixed;
+        }
+        //count++;
+        return datum;
+    }
+
+    @Override
     public Data readNext() throws Exception {
 
         try {
@@ -185,11 +260,14 @@ public class IterateFilesStream extends AbstractMultiStream {
                 stream.setUrl(new SourceURL(fileStatuses.remove(0).getPath().toString()));
                 stream.init();
 
+                fileCounter++;
                 log.info("Streaming file {}: {}", fileCounter, stream.getUrl().toString());
 
-                fileCounter++;
                 data = stream.readNext();
             }
+
+            data.put("ID", count + 1);
+            count = (long) fileCounter - 1;
 
             log.info("Read {} items", countReadNext++);
             return data;
