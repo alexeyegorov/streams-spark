@@ -264,10 +264,10 @@ public class SparkStreamTopology {
                             String copiesStr = el.getAttribute(stream.storm.Constants.NUM_WORKERS);
                             SparkConf conf = jsc.ssc().conf();
                             if (conf.contains(Constants.SPARK_STREAMING_BLOCK_INTERVAL)) {
-                                String s = conf.get(Constants.SPARK_STREAMING_BLOCK_INTERVAL);
-                                s = s.substring(0, s.length() - 2);
+                                String blockMillis = conf.get(Constants.SPARK_STREAMING_BLOCK_INTERVAL);
+                                blockMillis = blockMillis.substring(0, blockMillis.length() - 2);
 
-                                int blockInterval = Integer.parseInt(s);
+                                int blockInterval = Integer.parseInt(blockMillis);
                                 int copies = Integer.parseInt(copiesStr);
 
                                 // number of partitions used so far
