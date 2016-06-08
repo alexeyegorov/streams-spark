@@ -3,8 +3,10 @@ package stream;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.Duration;
+import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
@@ -31,6 +33,7 @@ import spark.config.ServiceHandler;
 import spark.config.SourceHandler;
 import spark.functions.SparkQueue;
 import spark.functions.SparkService;
+import spark.functions.SparkSource;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.util.Variables;
 import stream.util.XIncluder;
@@ -102,7 +105,7 @@ public class SparkStreamTopology {
         initFlinkServices(doc);
 
         // create stream sources (multiple are possible)
-        HashMap<String, JavaReceiverInputDStream<Data>> sources = initSparkSources();
+        HashMap<String, JavaDStream<Data>> sources = initSparkSources();
         if (sources == null) {
             log.error("No source was or could have been initialized.");
             return false;
@@ -151,7 +154,7 @@ public class SparkStreamTopology {
      * @param sources list of sources / queues
      * @return true if all functions can be applied; false if something goes wrong.
      */
-    private boolean initSparkFunctions(Document doc, HashMap<String, JavaReceiverInputDStream<Data>> sources) {
+    private boolean initSparkFunctions(Document doc, HashMap<String, JavaDStream<Data>> sources) {
         // check if any function is found to be applied onto data stream
         // spark topology won't stop, if some queue is mentioned but not used and if processor list
         // is using an input queue that is not filled
@@ -193,41 +196,21 @@ public class SparkStreamTopology {
                         // apply processors
                         final FlatMapFunction<Data, Data> function = handler.getFunction();
 
-                        final JavaReceiverInputDStream<Data> receiver = sources.get(input);
+                        final JavaDStream<Data> receiver = sources.get(input);
 
                         receiver.foreachRDD(new VoidFunction<JavaRDD<Data>>() {
                             @Override
                             public void call(JavaRDD<Data> dataJavaRDD) throws Exception {
                                 if (!dataJavaRDD.isEmpty()) {
-
-//                                    int numberOfCores = 1;
-//                                    if (variables.containsKey(Constants.SPARK_EXECUTOR_CORES)) {
-//                                        String s = variables.get(Constants.SPARK_EXECUTOR_CORES);
-//                                        numberOfCores = Integer.parseInt(s);
-//                                    }
-//                                    BatchFinishListener.setNumberOfCores(numberOfCores);
-
-//                                    BatchFinishListener batchFinisher = BatchFinishListener.getInstance();
-//                                    batchFinisher.registerProcessor(function, v2);
-
                                     long count = dataJavaRDD.flatMap(function).count();
                                     log.info("Mapped {} data items.", count);
-
-//                                    Iterator<BatchUIData> iterator = receiver.context()
-//                                            .progressListener().retainedCompletedBatches().iterator();
-//                                    while (iterator.hasNext()) {
-//                                        BatchUIData next = iterator.next();
-//                                        if (next.numRecords() > 0) {
-//                                            batchFinisher.finishProcessors(next.batchTime());
-//                                        }
-//                                    }
                                 }
                             }
                         });
+
 //                        DataStream<Data> dataStream =
 //                                .flatMap(function)
 //                                .setParallelism(getParallelism(el));
-//
 
                         //TODO split data stream depending on output queues
 //                        // detect output queues
@@ -247,9 +230,9 @@ public class SparkStreamTopology {
     }
 
     /**
-     * Find all sources (streams) and wrap them in FlinkSources.
+     * Find all sources (streams) and wrap them in SparkSources.
      */
-    private HashMap<String, JavaReceiverInputDStream<Data>> initSparkSources() {
+    private HashMap<String, JavaDStream<Data>> initSparkSources() {
         NodeList streamList = doc.getDocumentElement().getElementsByTagName("stream");
         if (streamList.getLength() < 1) {
             log.debug("At least 1 stream source has to be defined.");
@@ -258,7 +241,7 @@ public class SparkStreamTopology {
 
         ObjectFactory of = ObjectFactory.newInstance();
         SourceHandler sourceHandler = new SourceHandler(of);
-        HashMap<String, JavaReceiverInputDStream<Data>> sources = new HashMap<>(0);
+        HashMap<String, JavaDStream<Data>> sources = new HashMap<>(0);
 
         //TODO use something more simple?!
         for (int is = 0; is < streamList.getLength(); is++) {
@@ -275,10 +258,25 @@ public class SparkStreamTopology {
                         log.error("Error while handling the source for item {}", item);
                         return null;
                     }
-                    JavaReceiverInputDStream<Data> receiverStream = jsc.receiverStream(sourceHandler.getFunction());
+                    ArrayList<SparkSourceStream> functions = sourceHandler.getFunction();
 
+                    List<JavaDStream<Data>> dataStreams = new ArrayList<>(functions.size());
+                    while (functions.size() > 0) {
+                        dataStreams.add(jsc.receiverStream(functions.remove(0)));
+                    }
+
+                    JavaDStream<Data> unifiedStream;
+                    if (dataStreams.size() > 1) {
+                         unifiedStream = jsc.union(dataStreams.get(0),
+                                dataStreams.subList(1, dataStreams.size()));
+                    } else if (dataStreams.size() == 1){
+                        unifiedStream = dataStreams.remove(0);
+                    } else {
+                        log.error("NO data stream has been initialized.");
+                        return null;
+                    }
                     // put this source into the hashmap
-                    sources.put(id, receiverStream);
+                    sources.put(id, unifiedStream);
                     log.info("'{}' added as stream source.", id);
                 } else {
                     log.debug("Source handler doesn't handle {}", item.toString());

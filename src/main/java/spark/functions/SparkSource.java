@@ -1,17 +1,13 @@
 package spark.functions;
 
-import org.apache.spark.storage.StorageLevel;
-import org.apache.spark.streaming.receiver.Receiver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
 
-import java.io.IOException;
+import java.util.ArrayList;
 
-import stream.Data;
-import stream.io.Stream;
-import stream.runtime.setup.factory.ObjectFactory;
-import stream.runtime.setup.factory.StreamFactory;
+import stream.SparkSourceStream;
+import stream.storm.Constants;
 import stream.util.Variables;
 
 /**
@@ -19,19 +15,15 @@ import stream.util.Variables;
  *
  * @author alexey
  */
-public class SparkSource extends Receiver<Data> {
+public class SparkSource {
 
     static Logger log = LoggerFactory.getLogger(SparkSource.class);
 
     /**
      * Stream processor embedded inside of SourceFunction
      */
-    protected Stream streamProcessor;
+    protected ArrayList<SparkSourceStream> streamProcessor;
 
-    /**
-     * Flag to stop retrieving elements from the source.
-     */
-    private boolean isRunning = true;
 
     /**
      * Variables with environment information
@@ -39,84 +31,32 @@ public class SparkSource extends Receiver<Data> {
     protected Variables variables;
 
     /**
-     * Element object containing part of XML file with configuration for the source.
-     */
-    private Element el;
-
-    /**
      * Create new spark source object while saving XML's element with source configuration.
      *
+     * @param variables variables holding all the configuration
      * @param element part of XML with source configuration
      */
     public SparkSource(Variables variables, Element element) {
-        super(StorageLevel.MEMORY_AND_DISK_2());
+
         this.variables = variables;
-        this.el = element;
-        log.debug("Source for '" + el + "' initialized.");
-    }
-
-    /**
-     * init() is called inside of super class' readResolve() method.
-     */
-    protected void init() throws Exception {
-        streamProcessor = StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
-        streamProcessor.init();
-    }
-
-    /**
-     * readResolve() is called every time an object has been deserialized. Inside of it init()
-     * method is called in order to provide right behaviour after deserialization.
-     *
-     * @return this object
-     */
-    public Object readResolve() throws Exception {
-        init();
-        return this;
-    }
-
-    @Override
-    public void onStart() {
-        new Thread() {
-            @Override
-            public void run() {
-                streamDataItems();
-            }
-        }.start();
-    }
-
-    /**
-     * Execute stream processor and store data items in Spark.
-     */
-    private void streamDataItems() {
-        if (streamProcessor == null) {
-            log.debug("Stream processor has not been initialized properly.");
-            return;
-        }
-        isRunning = true;
-        while (isRunning && !isStopped()) {
-            // Stream processor retrieves next element by calling readNext() method
-            // stop if stream is finished and produces NULL
+        int copies = 1;
+        if (element.hasAttribute(Constants.NUM_WORKERS)) {
+            String copiesStr = element.getAttribute(Constants.NUM_WORKERS);
             try {
-                Data data = streamProcessor.read();
-                if (data != null) {
-                    store(data);
-                } else {
-                    isRunning = false;
-                }
-            } catch (IOException exc) {
-                if (exc.getMessage().trim().toLowerCase().equals("stream closed")) {
-                    isRunning = false;
-                }
-            } catch (Exception e) {
-                log.error("Error while reading next data item: \n" + e.getMessage());
-                isRunning = false;
+                copies = Integer.parseInt(copiesStr);
+            } catch (NumberFormatException exc) {
+                copies = 1;
             }
         }
+        streamProcessor = new ArrayList<>(copies);
+        for (int i = 0; i < copies; i++) {
+            streamProcessor.add(new SparkSourceStream(i, copies, element, variables));
+        }
+        log.debug("Source for '" + element + "' initialized.");
     }
 
-    @Override
-    public void onStop() {
-        log.debug("Cancelling SparkSource '" + el + "'.");
-        isRunning = false;
+    public ArrayList<SparkSourceStream> getSourceFunctions() {
+        return streamProcessor;
     }
+
 }

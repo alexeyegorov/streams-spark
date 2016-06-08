@@ -1,17 +1,17 @@
 package spark.config;
 
-import org.apache.spark.streaming.receiver.Receiver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import spark.functions.SparkSource;
-import stream.Data;
+import stream.Constants;
+import stream.SparkSourceStream;
 import stream.SparkStreamTopology;
 import stream.runtime.setup.factory.ObjectFactory;
-import stream.Constants;
 
 /**
  * Configuration handler for streams sources. Method handle(...) creates SourceFunction to produce
@@ -23,7 +23,7 @@ public class SourceHandler extends SparkSourceConfigHandler {
 
     static Logger log = LoggerFactory.getLogger(SourceHandler.class);
 
-    protected Receiver<Data> function;
+    protected ArrayList<SparkSourceStream> function;
 
     public SourceHandler(ObjectFactory of) {
         super(of);
@@ -51,7 +51,7 @@ public class SourceHandler extends SparkSourceConfigHandler {
         log.info("  >   Expanded parameters: {}", params);
 
         log.info("  >   Creating spout-instance from class {}, parameters: {}", className, params);
-        function = new SparkSource(st.getVariables(), el);
+        function = new SparkSource(st.getVariables(), el).getSourceFunctions();
     }
 
 
@@ -61,7 +61,7 @@ public class SourceHandler extends SparkSourceConfigHandler {
     }
 
     @Override
-    public Receiver<Data> getFunction() {
+    public ArrayList<SparkSourceStream> getFunction() {
         return function;
     }
 }

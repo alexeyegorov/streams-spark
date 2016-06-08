@@ -1,15 +1,17 @@
 package spark.config;
 
-import org.apache.spark.streaming.receiver.Receiver;
+import java.util.ArrayList;
 
+import spark.functions.SparkSource;
+import stream.SparkSourceStream;
 import stream.runtime.setup.factory.ObjectFactory;
 
 /**
- * @author alexey 
+ * @author alexey
  */
 public abstract class SparkSourceConfigHandler extends SparkConfigHandler {
 
-    transient Receiver function;
+    transient ArrayList<SparkSourceStream> function;
 
     public SparkSourceConfigHandler(ObjectFactory of) {
         super(of);
@@ -20,7 +22,7 @@ public abstract class SparkSourceConfigHandler extends SparkConfigHandler {
      *
      * @return function created in the handle(...) method.
      */
-    public Receiver getFunction() {
+    public ArrayList<SparkSourceStream> getFunction() {
         return function;
     }
 }
