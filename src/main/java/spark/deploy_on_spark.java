@@ -86,7 +86,7 @@ public class deploy_on_spark {
         // set streaming block interval (number of tasks = batch interval / block interval)
         String blockInterval = docElement.hasAttribute("spark-block-interval")
                 ? docElement.getAttribute("spark-block-interval") + "ms" : "200ms";
-        sparkConf.set("spark.streaming.blockInterval", blockInterval);
+        sparkConf.set(Constants.SPARK_STREAMING_BLOCK_INTERVAL, blockInterval);
 
 //        sparkConf.set("spark.extraListeners", "spark.TaskFinishListener");
 //        sparkConf.set("spark.executor.memory", "3g");

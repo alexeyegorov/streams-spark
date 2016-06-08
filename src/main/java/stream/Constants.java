@@ -13,4 +13,5 @@ public class Constants {
     public static final int DEFAULT_PARALLELISM = 1;
     public static final String SPARK_MASTER_NODE = "spark-master-node";
     public static final String SPARK_EXECUTOR_CORES = "spark.executor.cores";
+    public static final String SPARK_STREAMING_BLOCK_INTERVAL = "spark.streaming.blockInterval";
 }
