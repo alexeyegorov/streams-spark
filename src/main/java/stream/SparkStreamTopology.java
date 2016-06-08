@@ -340,20 +340,6 @@ public class SparkStreamTopology {
         }
     }
 
-    /**
-     * Register BatchFinishListener to topology.
-     */
-    public void addListener() {
-//        int numberOfCores;
-//        if (variables.containsKey("spark.executor.cores")){
-//            numberOfCores = Integer.parseInt(variables.get("spark.executor.cores"));
-//        } else {
-//            numberOfCores = 2;
-//        }
-//        jsc.addStreamingListener(new BatchFinishListener(numberOfCores));
-//        log.info("Added listener to detect the end of each batch.");
-    }
-
     //    /**
 //     * For a list of processors enqueueing items split the DataStream and put the selected new data
 //     * streams into the hashmap.

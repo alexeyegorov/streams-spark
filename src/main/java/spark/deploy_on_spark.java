@@ -73,11 +73,11 @@ public class deploy_on_spark {
                 ? docElement.getAttribute(Constants.SPARK_MASTER_NODE) : "local[2]";
         sparkConf.setMaster(masterNode);
 
+        //FIXME try to use SNAPPY again
         // switch the compression from SNAPPY to LZF due to problems with the snappy library
         sparkConf.set("spark.io.compression.codec", "org.apache.spark.io.LZFCompressionCodec");
 
-//        sparkConf.set("spark.streaming.receiver.maxRate", "200");
-
+        //FIXME default parallelism vs copies?
         // set parallelism level
         String parallelism = docElement.hasAttribute("spark.default.parallelism")
                 ? docElement.getAttribute("spark.default.parallelism") : "2";
@@ -88,10 +88,6 @@ public class deploy_on_spark {
                 ? docElement.getAttribute("spark-block-interval") + "ms" : "200ms";
         sparkConf.set(Constants.SPARK_STREAMING_BLOCK_INTERVAL, blockInterval);
 
-//        sparkConf.set("spark.extraListeners", "spark.TaskFinishListener");
-//        sparkConf.set("spark.executor.memory", "3g");
-//
-//        sparkConf.set("spark.driver.memory", "4g");
         // set batch interval
         String attribute = docElement.getAttribute(Constants.SPARK_BATCH_INTERVAL);
         long interval;
@@ -109,7 +105,6 @@ public class deploy_on_spark {
         SparkStreamTopology sparkStreamTopology = new SparkStreamTopology(doc, sparkConf, milliseconds);
 
         if (sparkStreamTopology.createTopology()) {
-//            sparkStreamTopology.addListener();
             sparkStreamTopology.executeTopology();
         } else {
             log.info("Do not execute the topology as there were errors while building the topology.");
