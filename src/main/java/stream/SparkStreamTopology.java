@@ -255,9 +255,6 @@ public class SparkStreamTopology {
                             continue;
                         }
 
-                        // retrieve the processor function
-                        final FlatMapFunction<Data, Data> function = handler.getFunction();
-
                         // retrieve the incoming data stream
                         JavaDStream<Data> receiver = sources.get(input);
 
@@ -288,6 +285,9 @@ public class SparkStreamTopology {
                                 }
                             }
                         }
+
+                        // retrieve the processor function
+                        final FlatMapFunction<Data, Data> function = handler.getFunction();
 
                         //FIXME why does MAP function skips some data items? would flatMap work?
                         receiver.foreachRDD(new VoidFunction<JavaRDD<Data>>() {
