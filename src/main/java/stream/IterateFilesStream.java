@@ -45,6 +45,8 @@ public class IterateFilesStream extends ParallelSparkMultiStream {
     private int countReadNext;
     private FileSystem fs;
 
+    private int limitFiles = -1;
+
     /**
      * Number of all initialiazed copies.
      */
@@ -62,6 +64,10 @@ public class IterateFilesStream extends ParallelSparkMultiStream {
 
     public IterateFilesStream(SourceURL url) {
         super(url);
+    }
+
+    public void setLimitFiles(int limitFiles) {
+        this.limitFiles = limitFiles;
     }
 
     @Override
@@ -114,8 +120,8 @@ public class IterateFilesStream extends ParallelSparkMultiStream {
         log.info("Found {} files in the HDFS folder.", this.fileStatuses.size());
 
         Long maxFileNumber = (long) fileStatuses.size();
-        if (limit < maxFileNumber) {
-            maxFileNumber = limit;
+        if (limitFiles < maxFileNumber) {
+            maxFileNumber = (long) limitFiles;
         }
 
         if (maxFileNumber < numberOfCopies) {
@@ -135,7 +141,7 @@ public class IterateFilesStream extends ParallelSparkMultiStream {
                 ? maxFileNumber : startStreamFile + blockSize);
 
         // define new end of the file
-        limit = (long) (stopStreamFile - startStreamFile);
+        limitFiles = stopStreamFile - startStreamFile;
 
         log.info("Initializing IterateFilesStream for instance {} of {}, begin with {} up to {}.",
                 copyNumber, numberOfCopies, startStreamFile, stopStreamFile);
@@ -211,32 +217,14 @@ public class IterateFilesStream extends ParallelSparkMultiStream {
     }
 
     @Override
-    public synchronized Data read() throws Exception {
-        if (closed || (limit > 0 && count >= limit))
-            return null;
-
-        Data datum = readNext();
-        if (datum == null) {
-            log.debug("End-of-stream reached!");
+    public Data read() throws Exception {
+        // check whether file limit has been reached
+        if ((limitFiles > 0 && (fileCounter - 1) >= limitFiles)){
             return null;
         }
 
-        if (this.id != null)
-            datum.put(SOURCE_KEY, this.id);
-
-        if (this.sequenceKey != null) {
-            SequenceID next = this.seqId.getAndIncrement();
-            datum.put(sequenceKey, next);
-        }
-        if (prefix != null && !prefix.trim().isEmpty()) {
-            Data prefixed = DataFactory.create();
-            for (String key : datum.keySet()) {
-                prefixed.put(prefix + ":" + key, datum.get(key));
-            }
-            datum = prefixed;
-        }
-        //count++;
-        return datum;
+        // if file limit has not been reached, read the next data item
+        return super.read();
     }
 
     @Override
@@ -265,10 +253,6 @@ public class IterateFilesStream extends ParallelSparkMultiStream {
 
                 data = stream.readNext();
             }
-
-            data.put("ID", count + 1);
-            count = (long) fileCounter - 1;
-
             log.info("Read {} items", countReadNext++);
             return data;
 
