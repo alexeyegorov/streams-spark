@@ -171,7 +171,6 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
         if (data != null) {
             process.process(data);
 
-            //TODO add items collected through queues
             // go through all queues and collect written data items
             for (SparkQueue q : sparkQueues) {
                 while (q.getSize() > 0) {
