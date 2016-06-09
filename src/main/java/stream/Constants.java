@@ -14,4 +14,5 @@ public class Constants {
     public static final String SPARK_MASTER_NODE = "spark-master-node";
     public static final String SPARK_EXECUTOR_CORES = "spark.executor.cores";
     public static final String SPARK_STREAMING_BLOCK_INTERVAL = "spark.streaming.blockInterval";
+    public static final String SPARK_QUEUE = "spark.queue";
 }

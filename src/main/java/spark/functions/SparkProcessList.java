@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import spark.BatchFinishListener;
+import spark.QueueInjection;
 import spark.ServiceInjection;
 import spark.Utils;
 import stream.Constants;
@@ -37,7 +38,7 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
     /**
      * List of queues
      */
-//    private List<SparkQueue> sparkQueues;
+    private List<SparkQueue> sparkQueues;
 
     /**
      * List of services
@@ -79,13 +80,13 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
                 streamTopology.variables.get(Constants.APPLICATION_ID));
 
         // add only queues that are used in this ProcessorList
-//        List<String> listOfOutputQueues = getListOfOutputQueues();
-//        sparkQueues = new ArrayList<>(0);
-//        for (SparkQueue queue : streamTopology.sparkQueues) {
-//            if (listOfOutputQueues.contains(queue.getQueueName().toLowerCase())) {
-//                sparkQueues.add(queue);
-//            }
-//        }
+        List<String> listOfOutputQueues = Utils.getOutputQueues(this.element);
+        sparkQueues = new ArrayList<>(0);
+        for (SparkQueue queue : streamTopology.sparkQueues) {
+            if (listOfOutputQueues.contains(queue.getQueueName())) {
+                sparkQueues.add(queue);
+            }
+        }
 
         // add services
         this.sparkServices = streamTopology.sparkServices;
@@ -97,7 +98,7 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
         } catch (Exception e) {
             log.error("Error while creating process\n" + e.getMessage());
             e.printStackTrace();
-            //TODO do we have a nicer way to stop programm?
+            //TODO do we have a nicer way to stop the program?
             System.exit(-1);
         }
 
@@ -111,6 +112,7 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
 //            String s = variables.get(Constants.SPARK_EXECUTOR_CORES);
 //            numberOfCores = Integer.parseInt(s);
 //        }
+        //TODO handle number of cores for logging performance right
         BatchFinishListener.setNumberOfCores(1);
         BatchFinishListener instance = BatchFinishListener.getInstance();
         log.info("Initializing ProcessorList with BatchListener {}", instance);
@@ -147,12 +149,13 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
         // The handler injects wrappers for any QueueService accesses, thus
         // effectively doing the queue-flow injection
         //
-//        QueueInjection queueInjection = new QueueInjection(sparkQueues);
-//        pf.addCreationHandler(queueInjection);
-//
+        QueueInjection queueInjection = new QueueInjection(sparkQueues);
+        pf.addCreationHandler(queueInjection);
+
         ServiceInjection serviceInjection = new ServiceInjection(sparkServices);
         pf.addCreationHandler(serviceInjection);
 
+        // create nested processors (list of processors) to be executed
         log.debug("Creating processor-list from element {}", element);
         List<Processor> list = pf.createNestedProcessors(element);
         process = new ProcessorList();
@@ -166,16 +169,15 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
     public Iterable<Data> call(Data data) throws Exception {
         ArrayList<Data> iterable = new ArrayList<>(0);
         if (data != null) {
-            data = process.process(data);
-            iterable.add(data);
+            process.process(data);
 
             //TODO add items collected through queues
             // go through all queues and collect written data items
-//            for (SparkQueue q : sparkQueues) {
-//                while (q.getSize() > 0) {
-//                    collector.collect(q.read());
-//                }
-//            }
+            for (SparkQueue q : sparkQueues) {
+                while (q.getSize() > 0) {
+                    iterable.add(q.read());
+                }
+            }
         }
 
         return iterable;

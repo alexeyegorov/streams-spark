@@ -40,7 +40,7 @@ import stream.runtime.setup.factory.ObjectFactory;
 import stream.runtime.setup.factory.ProcessorFactory.ProcessorCreationHandler;
 
 /**
- * Original QueueInjection used in streams-storm project adapted for use with FlinkQueues
+ * Original QueueInjection used in streams-storm project adapted for use with SparkQueues
  *
  * @author alexey, christian
  */
@@ -49,7 +49,7 @@ public class QueueInjection implements ProcessorCreationHandler {
     static Logger log = LoggerFactory.getLogger(stream.storm.QueueInjection.class);
 
     /**
-     * List of FlinkQueues used as wrapper for real queue implementations.
+     * List of SparkQueues used as wrapper for real queue implementations.
      */
     private final List<SparkQueue> sparkQueues;
 
@@ -93,12 +93,12 @@ public class QueueInjection implements ProcessorCreationHandler {
                     List<SparkQueue> wrapper = new ArrayList<>();
                     for (String name : names) {
                         if (!name.trim().isEmpty()) {
-                            SparkQueue flinkQueue = getSparkQueue(name);
-                            if (flinkQueue != null) {
-                                wrapper.add(flinkQueue);
+                            SparkQueue sparkQueue = getSparkQueue(name);
+                            if (sparkQueue != null) {
+                                wrapper.add(sparkQueue);
                             } else {
-                                log.debug("Queue '{}' was not found in the list of defined queues",
-                                        name);
+                                log.debug("Queue '{}' was not found in the list of the " +
+                                        "defined queues", name);
                             }
                         }
                     }
@@ -110,9 +110,9 @@ public class QueueInjection implements ProcessorCreationHandler {
                     // setter using queue name
                     String name = params.get(prop);
                     log.debug("Injecting a single queue... using method {}", m);
-                    SparkQueue flinkQueue = getSparkQueue(name);
-                    if (flinkQueue != null) {
-                        m.invoke(p, flinkQueue);
+                    SparkQueue sparkQueue = getSparkQueue(name);
+                    if (sparkQueue != null) {
+                        m.invoke(p, sparkQueue);
                     } else {
                         log.debug("Queue '{}' was not found in the list of defined queues", name);
                     }

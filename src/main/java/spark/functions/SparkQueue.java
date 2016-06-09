@@ -7,6 +7,7 @@ import org.w3c.dom.Element;
 import java.io.Serializable;
 import java.util.Collection;
 
+import stream.Constants;
 import stream.Data;
 import stream.SparkStreamTopology;
 import stream.io.Queue;
@@ -94,16 +95,14 @@ public class SparkQueue extends StreamsSparkObject implements Serializable, Queu
 
     @Override
     public boolean write(Data item) throws Exception {
-        //TODO: move to constants
-        item.put("spark.queue", id);
+        item.put(Constants.SPARK_QUEUE, id);
         return queue.write(item);
     }
 
     @Override
     public boolean write(Collection<Data> data) throws Exception {
         for (Data item : data) {
-            //TODO: move to constants
-            item.put("spark.queue", id);
+            item.put(Constants.SPARK_QUEUE, id);
         }
         return queue.write(data);
     }

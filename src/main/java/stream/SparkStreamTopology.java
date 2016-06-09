@@ -3,6 +3,7 @@ package stream;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaDStream;
@@ -290,29 +291,27 @@ public class SparkStreamTopology {
                         final FlatMapFunction<Data, Data> function = handler.getFunction();
 
                         //FIXME why does MAP function skips some data items? would flatMap work?
-                        receiver.foreachRDD(new VoidFunction<JavaRDD<Data>>() {
-                            @Override
-                            public void call(JavaRDD<Data> dataJavaRDD) throws Exception {
-                                if (!dataJavaRDD.isEmpty()) {
-                                    long count = dataJavaRDD.flatMap(function).count();
-                                    log.info("Mapped {} data items.", count);
-                                }
-                            }
-                        });
+                        JavaDStream<Data> dataJavaDStream = receiver.flatMap(function);
+//                        receiver.foreachRDD(new VoidFunction<JavaRDD<Data>>() {
+//                            @Override
+//                            public void call(JavaRDD<Data> dataJavaRDD) throws Exception {
+//                                if (!dataJavaRDD.isEmpty()) {
+//                                    long count = dataJavaRDD.flatMap(function).count();
+//                                    log.info("Mapped {} data items.", count);
+//                                }
+//                            }
+//                        });
 
-//                        DataStream<Data> dataStream =
-//                                .flatMap(function)
-//                                .setParallelism(getParallelism(el));
-
-                        //TODO split data stream depending on output queues
-//                        // detect output queues
-//                        List<String> outputQueues = function.getListOfOutputQueues();
+                        // detect output queues
+                        List<String> outputQueues = Utils.getOutputQueues(el);
 
                         // split the data stream if there are any queues used inside
                         // of process list
-//                        if (outputQueues.size() > 0) {
-//                            splitDataStream(sources, dataStream, outputQueues);
-//                        }
+                        if (outputQueues.size() > 0) {
+                            splitDataStream(sources, dataJavaDStream, outputQueues);
+                        } else {
+                            dataJavaDStream.print();
+                        }
                         anyFunctionFound = true;
                     }
                 }
@@ -340,41 +339,33 @@ public class SparkStreamTopology {
         }
     }
 
-    //    /**
-//     * For a list of processors enqueueing items split the DataStream and put the selected new data
-//     * streams into the hashmap.
-//     *
-//     * @param sources      hash map containing data streams
-//     * @param dataStream   data stream used for split
-//     * @param outputQueues list of queues used for the output
-//     */
-//    private static void splitDataStream(HashMap<String, DataStream<Data>> sources,
-//                                        DataStream<Data> dataStream,
-//                                        List<String> outputQueues) {
-//        final List<String> allQueues = outputQueues;
-//        SplitStream<Data> split = dataStream.split(new OutputSelector<Data>() {
-//            @Override
-//            public Iterable<String> select(Data data) {
-//                List<String> queues = new ArrayList<>(allQueues.size());
-//                try {
-//                    if (data.containsKey("spark.queue")) {
-//                        String outputQueue = (String) data.get("spark.queue");
-//                        log.debug("spark.queue {}", outputQueue);
-//                        for (String queue : allQueues) {
-//                            if (queue.equals(outputQueue)) {
-//                                queues.add(queue);
-//                            }
-//                        }
-//                    }
-//                } catch (NullPointerException ex) {
-//                    log.error("Data item is empty.");
-//                }
-//                return queues;
-//            }
-//        });
-//        for (String queue : allQueues) {
-//            sources.put(queue, split.select(queue));
-//        }
-//    }
+    /**
+     * For a list of processors enqueueing items split the DataStream and put the selected new data
+     * streams into the hashmap.
+     *
+     * @param sources      hash map containing data streams
+     * @param dataStream   data stream used for split
+     * @param outputQueues list of queues used for the output
+     */
+    private static void splitDataStream(HashMap<String, JavaDStream<Data>> sources,
+                                        JavaDStream<Data> dataStream,
+                                        List<String> outputQueues) {
+        for (final String queue : outputQueues) {
+            JavaDStream<Data> filtered = dataStream.filter(new Function<Data, Boolean>() {
+                @Override
+                public Boolean call(Data data) throws Exception {
+                    if (data.containsKey("spark.queue")) {
+                        String outputQueue = (String) data.get("spark.queue");
+                        log.debug("spark.queue {}", outputQueue);
+                        if (queue.equals(outputQueue)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            });
+            sources.put(queue, filtered);
+        }
+    }
 }
 
