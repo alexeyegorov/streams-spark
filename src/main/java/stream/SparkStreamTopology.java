@@ -290,17 +290,7 @@ public class SparkStreamTopology {
                         // retrieve the processor function
                         final FlatMapFunction<Data, Data> function = handler.getFunction();
 
-                        //FIXME why does MAP function skips some data items? would flatMap work?
                         JavaDStream<Data> dataJavaDStream = receiver.flatMap(function);
-//                        receiver.foreachRDD(new VoidFunction<JavaRDD<Data>>() {
-//                            @Override
-//                            public void call(JavaRDD<Data> dataJavaRDD) throws Exception {
-//                                if (!dataJavaRDD.isEmpty()) {
-//                                    long count = dataJavaRDD.flatMap(function).count();
-//                                    log.info("Mapped {} data items.", count);
-//                                }
-//                            }
-//                        });
 
                         // detect output queues
                         List<String> outputQueues = Utils.getOutputQueues(el);
