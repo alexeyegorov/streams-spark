@@ -8,9 +8,7 @@ import org.w3c.dom.Element;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 
-import scala.collection.mutable.ArrayBuffer;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.runtime.setup.factory.StreamFactory;
 import stream.util.Variables;
@@ -28,7 +26,7 @@ public class SparkSourceStream extends Receiver<Data> {
      */
     private boolean isRunning = true;
 
-    private ParallelSparkMultiStream streamProcessor;
+    private ParallelMultiStream streamProcessor;
 
     private int instanceNumber;
     private int copiesNumber;
@@ -43,7 +41,7 @@ public class SparkSourceStream extends Receiver<Data> {
         log.info("Create SparkSourceStream. Instance {} out of {}.", instanceNumber, copiesNumber);
 
         try {
-            streamProcessor = (ParallelSparkMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
+            streamProcessor = (ParallelMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
             streamProcessor.getClass().getMethod("handleParallelism", int.class, int.class);
             streamProcessor.handleParallelism(instanceNumber, copiesNumber);
 
@@ -58,7 +56,7 @@ public class SparkSourceStream extends Receiver<Data> {
      * init() is called inside of super class' readResolve() method.
      */
     protected void init() throws Exception {
-        streamProcessor = (ParallelSparkMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
+        streamProcessor = (ParallelMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
         try{
             Class<?> aClass = streamProcessor.getClass();
             aClass.getMethod("handleParallelism", int.class, int.class);
@@ -105,10 +103,10 @@ public class SparkSourceStream extends Receiver<Data> {
             try {
                 Data data = streamProcessor.read();
                 if (data != null) {
-                    ArrayList<Data> list = new ArrayList<>();
-                    list.add(data);
-                    store(list.iterator());
-//                    store(data);
+//                    ArrayList<Data> list = new ArrayList<>();
+//                    list.add(data);
+//                    store(list.iterator());
+                    store(data);
                 } else {
                     isRunning = false;
                 }

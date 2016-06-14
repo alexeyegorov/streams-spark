@@ -17,15 +17,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import stream.annotations.Parameter;
-import stream.data.DataFactory;
-import stream.data.SequenceID;
 import stream.io.AbstractStream;
 import stream.io.SourceURL;
 
 /**
  * @author alexey
  */
-public class IterateFilesStream extends ParallelSparkMultiStream {
+public class IterateFilesStream extends ParallelMultiStream {
 
     static Logger log = LoggerFactory.getLogger(IterateFilesStream.class);
 
@@ -208,11 +206,11 @@ public class IterateFilesStream extends ParallelSparkMultiStream {
 
         // log all skipped files
         if (failedFilesCounter > 0) {
-            String failesFiles = "";
+            String failedFiles = "";
             for (String failedFile : failedFilesList) {
-                failesFiles += "\n" + failedFile;
+                failedFiles += "\n" + failedFile;
             }
-            log.info("Some files has been skipped because of errors: {}", failesFiles);
+            log.info("Some files has been skipped because of errors: {}", failedFiles);
         }
     }
 
