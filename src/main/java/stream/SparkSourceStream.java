@@ -35,7 +35,7 @@ public class SparkSourceStream extends Receiver<Data> {
 
     public SparkSourceStream(int instanceNumber, int copiesNumber, Element el, Variables variables) {
         //TODO decide what storage level should be used
-        super(StorageLevel.MEMORY_ONLY_SER());
+        super(StorageLevel.MEMORY_AND_DISK_SER());
         this.instanceNumber = instanceNumber;
         this.copiesNumber = copiesNumber;
         this.el = el;
