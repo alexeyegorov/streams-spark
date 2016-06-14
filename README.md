@@ -58,3 +58,7 @@ The easiest way to start a Spark job is to use the submit script by Spark itself
             file:///home/egorov/streams-spark-0.9.25-SNAPSHOT-spark-provided.jar /home/egorov/example.xml
 ```
 
+``spark.locality.wait{.node,.rack}`` setting can be used to enable splitting the tasks among several nodes.
+Otherwise default setting of 3 seconds will be used and possibly all tasks will run on the node where the data is received.
+
+Some further optimizations that are mentioned above has been described [here](https://blog.cloudera.com/blog/2016/01/how-cigna-tuned-its-spark-streaming-app-for-real-time-processing-with-apache-kafka/).
