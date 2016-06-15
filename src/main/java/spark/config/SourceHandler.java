@@ -9,7 +9,7 @@ import java.util.Map;
 
 import spark.functions.SparkSource;
 import stream.Constants;
-import stream.SparkSourceStream;
+import spark.functions.SparkSourceStream;
 import stream.SparkStreamTopology;
 import stream.runtime.setup.factory.ObjectFactory;
 

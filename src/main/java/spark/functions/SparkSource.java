@@ -6,7 +6,6 @@ import org.w3c.dom.Element;
 
 import java.util.ArrayList;
 
-import stream.SparkSourceStream;
 import stream.storm.Constants;
 import stream.util.Variables;
 
@@ -34,7 +33,7 @@ public class SparkSource {
      * Create new spark source object while saving XML's element with source configuration.
      *
      * @param variables variables holding all the configuration
-     * @param element part of XML with source configuration
+     * @param element   part of XML with source configuration
      */
     public SparkSource(Variables variables, Element element) {
 

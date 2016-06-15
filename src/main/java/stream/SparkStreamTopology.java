@@ -1,10 +1,8 @@
 package stream;
 
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -32,6 +30,7 @@ import spark.config.ServiceHandler;
 import spark.config.SourceHandler;
 import spark.functions.SparkQueue;
 import spark.functions.SparkService;
+import spark.functions.SparkSourceStream;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.util.Variables;
 import stream.util.XIncluder;

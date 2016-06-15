@@ -2,8 +2,7 @@ package spark.config;
 
 import java.util.ArrayList;
 
-import spark.functions.SparkSource;
-import stream.SparkSourceStream;
+import spark.functions.SparkSourceStream;
 import stream.runtime.setup.factory.ObjectFactory;
 
 /**

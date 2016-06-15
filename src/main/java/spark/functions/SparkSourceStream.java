@@ -1,4 +1,4 @@
-package stream;
+package spark.functions;
 
 import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.streaming.receiver.Receiver;
@@ -7,8 +7,9 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
+import stream.Data;
+import stream.ParallelMultiStream;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.runtime.setup.factory.StreamFactory;
 import stream.util.Variables;
