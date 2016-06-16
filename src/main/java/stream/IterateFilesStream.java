@@ -118,13 +118,15 @@ public class IterateFilesStream extends DistributedMultiStream {
         log.info("Found {} files in the HDFS folder.", this.fileStatuses.size());
 
         Long maxFileNumber = (long) fileStatuses.size();
-        if (limitFiles < maxFileNumber) {
+        if (limitFiles > 0 && limitFiles < maxFileNumber) {
+            log.info("Changing maxFileNumber to {} because {} < {}",
+                    limitFiles, limitFiles, maxFileNumber);
             maxFileNumber = (long) limitFiles;
         }
 
         if (maxFileNumber < numberOfCopies) {
             log.error("Number of instances must be less or equal to the number of files to be " +
-                    "read. Using {} files for this run.", numberOfCopies);
+                    "read ({}). Using {} files for this run.", maxFileNumber, numberOfCopies);
             maxFileNumber = (long) numberOfCopies;
         }
 
