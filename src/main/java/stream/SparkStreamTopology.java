@@ -260,8 +260,8 @@ public class SparkStreamTopology {
 
                         // handle the case of repartitioning (using previous number of
                         // partitions defined through batch and block interval)
-                        if (el.hasAttribute(stream.Constants.NUM_WORKERS)) {
-                            String copiesStr = el.getAttribute(stream.storm.Constants.NUM_WORKERS);
+                        if (el.hasAttribute(Constants.NUM_WORKERS)) {
+                            String copiesStr = el.getAttribute(Constants.NUM_WORKERS);
                             SparkConf conf = jsc.ssc().conf();
                             if (conf.contains(Constants.SPARK_STREAMING_BLOCK_INTERVAL)) {
                                 String blockMillis = conf.get(Constants.SPARK_STREAMING_BLOCK_INTERVAL);

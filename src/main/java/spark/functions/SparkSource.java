@@ -6,7 +6,7 @@ import org.w3c.dom.Element;
 
 import java.util.ArrayList;
 
-import stream.storm.Constants;
+import stream.Constants;
 import stream.util.Variables;
 
 /**
