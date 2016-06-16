@@ -6,15 +6,15 @@
     <groupId>de.sfb876</groupId>
     <name>streams-spark</name>
     <artifactId>${artifactid}</artifactId>
-    <version>0.9.25-SNAPSHOT</version>
+    <version>0.9.26-SNAPSHOT</version>
 
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spark.scope>provided</spark.scope>
+        <spark.scope>compile</spark.scope>
         <spark.mainclass>spark.deploy</spark.mainclass>
         <skipTests>true</skipTests>
-        <streams.version>0.9.25-SNAPSHOT</streams.version>
+        <streams.version>0.9.26-SNAPSHOT</streams.version>
         <artifactid>streams-spark</artifactid>
         <spark.version>(1.0.0,]</spark.version>
     </properties>
@@ -223,21 +223,27 @@
             <groupId>de.sfb876</groupId>
             <artifactId>streams-hdfs</artifactId>
             <version>0.0.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jwall</groupId>
+                    <artifactId>streams-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>de.sfb876</groupId>
             <artifactId>streams-api</artifactId>
-            <version>0.9.25-SNAPSHOT</version>
+            <version>${streams.version}</version>
         </dependency>
         <dependency>
             <groupId>de.sfb876</groupId>
             <artifactId>streams-performance</artifactId>
-            <version>0.9.25-SNAPSHOT</version>
+            <version>${streams.version}</version>
         </dependency>
         <dependency>
             <groupId>de.sfb876</groupId>
             <artifactId>streams-storm</artifactId>
-            <version>0.9.25-SNAPSHOT</version>
+            <version>${streams.version}</version>
         </dependency>
 
         <dependency>
@@ -280,6 +286,7 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-streaming_2.10</artifactId>
             <version>1.6.1</version>
+            <scope>${spark.scope}</scope>
         </dependency>
 
         <dependency>
