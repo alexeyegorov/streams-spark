@@ -9,7 +9,7 @@ import org.w3c.dom.Element;
 import java.io.IOException;
 
 import stream.Data;
-import stream.ParallelMultiStream;
+import stream.DistributedMultiStream;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.runtime.setup.factory.StreamFactory;
 import stream.util.Variables;
@@ -27,7 +27,7 @@ public class SparkSourceStream extends Receiver<Data> {
      */
     private boolean isRunning = true;
 
-    private ParallelMultiStream streamProcessor;
+    private DistributedMultiStream streamProcessor;
 
     private int instanceNumber;
     private int copiesNumber;
@@ -42,7 +42,7 @@ public class SparkSourceStream extends Receiver<Data> {
         log.info("Create SparkSourceStream. Instance {} out of {}.", instanceNumber, copiesNumber);
 
         try {
-            streamProcessor = (ParallelMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
+            streamProcessor = (DistributedMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
             streamProcessor.getClass().getMethod("handleParallelism", int.class, int.class);
             streamProcessor.handleParallelism(instanceNumber, copiesNumber);
 
@@ -57,7 +57,7 @@ public class SparkSourceStream extends Receiver<Data> {
      * init() is called inside of super class' readResolve() method.
      */
     protected void init() throws Exception {
-        streamProcessor = (ParallelMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
+        streamProcessor = (DistributedMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
         try{
             Class<?> aClass = streamProcessor.getClass();
             aClass.getMethod("handleParallelism", int.class, int.class);

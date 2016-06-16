@@ -23,7 +23,7 @@ import stream.io.SourceURL;
 /**
  * @author alexey
  */
-public class IterateFilesStream extends ParallelMultiStream {
+public class IterateFilesStream extends DistributedMultiStream {
 
     static Logger log = LoggerFactory.getLogger(IterateFilesStream.class);
 
@@ -222,7 +222,12 @@ public class IterateFilesStream extends ParallelMultiStream {
         }
 
         // if file limit has not been reached, read the next data item
-        return super.read();
+        Data data = super.read();
+        if (data != null) {
+            data.put("ID", count + 1);
+//            log.info("Source ID: {}", count + 1);
+        }
+        return data;
     }
 
     @Override
