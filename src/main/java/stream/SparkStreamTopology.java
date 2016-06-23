@@ -232,7 +232,6 @@ public class SparkStreamTopology {
         SourceHandler sourceHandler = new SourceHandler(of);
         HashMap<String, JavaDStream<Data>> sources = new HashMap<>(0);
 
-        //TODO use something more simple?!
         for (int is = 0; is < streamList.getLength(); is++) {
             Element item = (Element) streamList.item(is);
             if (!item.getParentNode().getNodeName().equals("stream")) {
@@ -299,8 +298,7 @@ public class SparkStreamTopology {
         objectFactory.addVariables(variables);
         ProcessListHandler handler = new ProcessListHandler(objectFactory);
 
-        //TODO use getElementsByTagName?
-        NodeList list = doc.getDocumentElement().getChildNodes();
+        NodeList list = doc.getDocumentElement().getElementsByTagName("process");
         int length = list.getLength();
         for (int i = 0; i < length; i++) {
             Node node = list.item(i);
