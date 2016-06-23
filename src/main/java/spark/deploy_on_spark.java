@@ -3,7 +3,6 @@ package spark;
 import org.apache.spark.SparkConf;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
-import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -77,16 +76,12 @@ public class deploy_on_spark {
         // switch the compression from SNAPPY to LZF due to problems with the snappy library
         sparkConf.set("spark.io.compression.codec", "org.apache.spark.io.LZFCompressionCodec");
 
-        //FIXME default parallelism vs copies?
         // set parallelism level
         String parallelism = docElement.hasAttribute("spark.default.parallelism")
                 ? docElement.getAttribute("spark.default.parallelism") : "2";
         sparkConf.set("spark.default.parallelism", parallelism);
 
-        // set streaming block interval (number of tasks = batch interval / block interval)
-        String blockInterval = docElement.hasAttribute("spark-block-interval")
-                ? docElement.getAttribute("spark-block-interval") + "ms" : "200ms";
-        sparkConf.set(Constants.SPARK_STREAMING_BLOCK_INTERVAL, blockInterval);
+        sparkConf.set("spark.streaming.backpressure.enabled", "true");
 
         // set batch interval
         String attribute = docElement.getAttribute(Constants.SPARK_BATCH_INTERVAL);
@@ -98,9 +93,8 @@ public class deploy_on_spark {
         }
         Duration milliseconds = Durations.milliseconds(interval);
 
-        log.info("Creating app '{}' with master node mode '{}', batch interval of '{}' ms " +
-                "and block interval of '{}' ms",
-                appId, masterNode, interval, blockInterval);
+        log.info("Creating app '{}' with master node mode '{}' and batch interval of '{}' ms ",
+                appId, masterNode, interval);
 
         SparkStreamTopology sparkStreamTopology = new SparkStreamTopology(doc, sparkConf, milliseconds);
 
