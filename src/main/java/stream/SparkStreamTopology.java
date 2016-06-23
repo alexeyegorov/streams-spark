@@ -420,8 +420,8 @@ public class SparkStreamTopology {
             JavaDStream<Data> filtered = dataStream.filter(new Function<Data, Boolean>() {
                 @Override
                 public Boolean call(Data data) throws Exception {
-                    if (data.containsKey("spark.queue")) {
-                        String outputQueue = (String) data.get("spark.queue");
+                    if (data.containsKey(Constants.SPARK_QUEUE)) {
+                        String outputQueue = (String) data.get(Constants.SPARK_QUEUE);
                         log.debug("spark.queue {}", outputQueue);
                         if (queue.equals(outputQueue)) {
                             return true;
