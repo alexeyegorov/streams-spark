@@ -1,8 +1,10 @@
 package stream;
 
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -159,7 +161,6 @@ public class SparkStreamTopology {
         // create all possible queues
         initSparkQueues(doc);
 
-//        JavaDStream<Long> data = sources.get("data").count();
         // create processor list handler and apply it to ProcessorLists
         return initSparkFunctions(doc, sources);
     }
@@ -360,6 +361,7 @@ public class SparkStreamTopology {
                         // retrieve the processor function
                         final FlatMapFunction<Data, Data> function = handler.getFunction();
 
+                        // apply process functions (processors)
                         JavaDStream<Data> dataJavaDStream = receiver.flatMap(function);
 
                         // detect output queues
@@ -370,7 +372,13 @@ public class SparkStreamTopology {
                         if (outputQueues.size() > 0) {
                             splitDataStream(sources, dataJavaDStream, outputQueues);
                         } else {
-                            dataJavaDStream.print();
+                            dataJavaDStream.foreachRDD(new VoidFunction<JavaRDD<Data>>() {
+                                @Override
+                                public void call(JavaRDD<Data> dataJavaRDD) throws Exception {
+                                    long count = dataJavaRDD.count();
+                                    log.info("Processed {} event items.", count);
+                                }
+                            });
                         }
                         anyFunctionFound = true;
                     }
