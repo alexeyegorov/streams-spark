@@ -1,24 +1,167 @@
-<container id="example" spark-batch-interval="500" spark-master-node="local[2]">
+<!--<container id="example" spark-batch-interval="2000" spark-master-node="local[3]">-->
+<container id="example"
+		   spark-batch-interval="4000"
+           spark-parallelism="35"
+		   spark-master-node="spark://129.217.30.197:7077">
+		   <!--spark-block-interval="600"-->
 
 	<!--<stream id="data" class="stream.generator.RandomStream" limit="10000" />-->
 	<property name="infile" value="hdfs://ls8cb01.cs.uni-dortmund.de:9000/FACT/simulation/" />
-	<stream id="data" class="stream.IterateFilesStream" url="${infile}" ending=".fits.gz" copies="1" limit="1000">
+	<property name="drsfile" value="hdfs://ls8cb01.cs.uni-dortmund.de:9000/user/hadoop/examples/mc/stdMcDrsFile.drs.fits.gz" />
+	<property name="auxFolder" value="file:/home/egorov/aux/" />
+	<property name="integralGainFile" value="classpath:/default/gain_sorted_20131127.csv" />
+	<property name="pixelDelayFile" value="classpath:/default/delays_lightpulser_20150217.csv" />
+
+	<service id="auxService" class="fact.auxservice.AuxFileService" auxFolder="${auxFolder}" />
+	<service id="calibService" class="fact.calibrationservice.ConstantCalibService" />
+
+	<property name="numberSources" value="2" />
+	<property name="partitionFactor" value="2" />
+	<property name="sparkCores" value="10" />
+
+	<stream id="data" class="stream.IterateFilesStream" url="${infile}" ending=".fits.gz"
+			copies="${numberSources}" limit="10000">
 		<stream id="_" class="fact.io.FitsStream"/>
 	</stream>
 
-	<process input="data">
+	<process input="data" id="factprocess">
 		<!--  -->
-		<CreateID />
+		<streams.PerformanceWithReset every="100" host="129.217.30.198" port="6001">
+		<!--<streams.PerformanceWithReset every="10" host="127.0.0.1" port="6001">-->
+			<CreateID />
+			<RenameKey from="Data" to="raw:data" />
+			<fact.pixelsets.AllPixels outputKey="pixels" />
+			<RenameKey from="StartCellData" to="meta:startCellData" />
+
+			<!--<fact.utils.PreviousEventInfo />-->
+			<stream.flow.Skip condition="%{data.TriggerType} != 4" />
+
+			<fact.datacorrection.DrsCalibration url="${drsfile}" />
+			<!--<fact.datacorrection.PatchJumpRemoval />-->
+			<fact.datacorrection.RemoveSpikes />
+			<fact.filter.DrsTimeCalibration />
+			<fact.filter.ArrayTimeCorrection />
+			<fact.datacorrection.InterpolateTimeSeries calibService="calibService"/>
+
+			<!-- Extract numEstPhotons -->
+			<fact.extraction.BasicExtraction url="${integralGainFile}"/>
+			<fact.extraction.EstimateBaseline />
+			<fact.extraction.TimeOverThreshold />
+			<fact.datacorrection.CorrectSaturation />
+			<fact.extraction.BasicExtraction url="${integralGainFile}"/>
+
+
+			<!-- Extract ArrivalTimes -->
+			<fact.extraction.ArrivalTimeForPositions />
+			<fact.extraction.ArrivalTimePolynomFit />
+			<fact.datacorrection.CorrectPixelDelays url="${pixelDelayFile}"/>
+
+			<fact.datacorrection.InterpolatePhotondata calibService="calibService"/>
+
+			<!-- Statistical Features -->
+			<fact.statistics.ArrayStatistics key="pixels:estNumPhotons"/>
+			<fact.statistics.ArrayStatistics key="pixels:arrivalTimes"/>
+
+
+			<!--     <fact.features.source.SourcePosition outputKey="cetatauri" sourceRightAscension="5.627416667" sourceDeclination="21.1425" auxService="auxService" />
+				<fact.cleaning.TwoLevelTimeNeighbor calibService="calibService" starPositionKeys="cetatauri" /> -->
+
+			<!--<PrintData/>-->
+			<Skip condition="%{data.shower} == null"/>
+
+			<!--<stream.demo.Enqueue queues="nextQueue" condition="true"/>-->
+
+		</streams.PerformanceWithReset>
+
+		<!--<fact.pixelsets.NumPixel pixelSetKey="shower" />-->
+
+		<!--<Skip condition="%{data.shower:numPixel} &lt; 5" />-->
+
+
+		<!--<fact.LoopValues-->
+				<!--key="key"-->
+				<!--values="pixels:estNumPhotons,-->
+	                        <!--pixels:arrivalTimes,-->
+	                        <!--pixels:maxSlopes,-->
+	                        <!--pixels:maxAmplitudePositions"-->
+				<!--outputKeys="shower:estNumPhotons,-->
+	                            <!--shower:arrivalTimes,-->
+	                            <!--shower:maxSlopes,-->
+	                            <!--shower:maxAmplitudePositions">-->
+			<!--<fact.statistics.ArrayStatistics key="" pixelSetKey="shower" />-->
+		<!--</fact.LoopValues>-->
+
+		<!--<fact.features.Size />-->
+		<!--<fact.features.EllipseParameter/>-->
+		<!--<fact.features.M3Long/>-->
+		<!--<fact.features.NumberOfIslands/>-->
+		<!--<fact.features.TimeGradient />-->
+		<!--<fact.features.Concentration/>-->
+		<!--<fact.features.ConcentrationCore/>-->
+		<!--<fact.features.ConcentrationAtCenterOfGravity/>-->
+		<!--<fact.features.Leakage/>-->
+		<!--<fact.features.TimeSpread />-->
+		<!--<fact.features.ShowerSlope />-->
+		<!--<fact.features.Disp />-->
+
+		<!--<fact.features.source.SourcePosition auxService="auxService" />-->
+		<!--<fact.LoopValues key="antiSourcePositionId" values="1,2,3,4,5"-->
+						 <!--outputKeys="antiSources:1,antiSources:2,antiSources:3,antiSources:4,antiSources:5">-->
+			<!--<fact.features.source.AntiSourcePosition antiSourcePositionId="1" />-->
+		<!--</fact.LoopValues>-->
+
+		<!--<fact.features.source.Alpha />-->
+		<!--<fact.features.source.Distance />-->
+		<!--<fact.features.source.CosDeltaAlpha />-->
+		<!--<fact.features.source.Theta />-->
+
+		<!--<fact.LoopValues-->
+				<!--key="sourceKey"-->
+				<!--values="antiSources:1,antiSources:2,antiSources:3,antiSources:4,antiSources:5"-->
+				<!--outputKeys="shower:antiSources:1:alpha,shower:antiSources:2:alpha,shower:antiSources:3:alpha,shower:antiSources:4:alpha,shower:antiSources:5:alpha">-->
+			<!--<fact.features.source.Alpha/>-->
+		<!--</fact.LoopValues>-->
+		<!--<fact.LoopValues-->
+				<!--key="sourceKey"-->
+				<!--values="antiSources:1,antiSources:2,antiSources:3,antiSources:4,antiSources:5"-->
+				<!--outputKeys="shower:antiSources:1:distance,shower:antiSources:2:distance,shower:antiSources:3:distance,shower:antiSources:4:distance,shower:antiSources:5:distance">-->
+			<!--<fact.features.source.Distance/>-->
+		<!--</fact.LoopValues>-->
+		<!--<fact.LoopValues-->
+				<!--key="sourceKey"-->
+				<!--values="antiSources:1,antiSources:2,antiSources:3,antiSources:4,antiSources:5"-->
+				<!--outputKeys="shower:antiSources:1:cosDeltaAlpha,shower:antiSources:2:cosDeltaAlpha,shower:antiSources:3:cosDeltaAlpha,shower:antiSources:4:cosDeltaAlpha,shower:antiSources:5:cosDeltaAlpha">-->
+			<!--<fact.features.source.CosDeltaAlpha/>-->
+		<!--</fact.LoopValues>-->
+		<!--<fact.LoopValues-->
+				<!--key="sourceKey"-->
+				<!--values="antiSources:1,antiSources:2,antiSources:3,antiSources:4,antiSources:5"-->
+				<!--outputKeys="shower:antiSources:1:theta,shower:antiSources:2:theta,shower:antiSources:3:theta,shower:antiSources:4:theta,shower:antiSources:5:theta">-->
+			<!--<fact.features.source.Theta/>-->
+		<!--</fact.LoopValues>-->
+
+		<!--<PrintData/>-->
+
+
+
 		<!--<streams.performance.Performance every="100" host="127.0.0.1">-->
 		<!--<stream.util.AlternateAB key="flag" />-->
 		<!--<stream.flow.Delay time="10ms" />-->
 		<!--<streams.DataRate every="100" silent="true"/>-->
-		<PrintData />
 		<!--<stream.logger.Message message="'bla' is processing item" />-->
 <!--
 		<stream.net.DataTap port="9000" />
 -->
 		<!--<stream.demo.Count />-->
 	</process>
+
+	<!--<queue id="nextQueue" />-->
+
+	<!--<process input="nextQueue" id="factprocess2">-->
+		<!--<streams.PerformanceWithReset every="10" host="127.0.0.1" port="6001">-->
+
+
+		<!--</streams.PerformanceWithReset>-->
+	<!--</process>-->
 	
 </container>
