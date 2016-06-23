@@ -49,6 +49,7 @@ public class SparkStreamTopology {
     private final long batchInterval;
     private Document doc;
     private JavaStreamingContext jsc;
+    private SparkConf sparkConf;
 
     /**
      * List of queues used for inter-process communication.
@@ -62,8 +63,8 @@ public class SparkStreamTopology {
 
     public SparkStreamTopology(Document doc, SparkConf sparkConf, Duration milliseconds) {
         this.doc = doc;
-        this.jsc = new JavaStreamingContext(sparkConf, milliseconds);
         this.batchInterval = milliseconds.milliseconds();
+        this.sparkConf = sparkConf;
         String cores = "2";
         if (sparkConf.contains(Constants.SPARK_EXECUTOR_CORES)) {
             cores = sparkConf.get(Constants.SPARK_EXECUTOR_CORES);
@@ -105,6 +106,45 @@ public class SparkStreamTopology {
         transformer.transform(new DOMSource(doc),
                 new StreamResult(new OutputStreamWriter(System.out, "UTF-8")));
 
+        // detect the partition fraction that depends on the number of partitions and cores
+        int numberSources = 1;
+        if (variables.containsKey("numberSources")) {
+            String sourcesString = variables.get("numberSources");
+            try {
+                numberSources = Integer.parseInt(sourcesString);
+            } catch (NumberFormatException exc) {
+                log.error("Error while parsing numberSources number out of {}.", sourcesString);
+            }
+        }
+
+        int partitionFactor = 1;
+        if (variables.containsKey("partitionFactor")) {
+            String fractionString = variables.get("partitionFactor");
+            try {
+                partitionFactor = Integer.parseInt(fractionString);
+            } catch (NumberFormatException exc) {
+                log.error("Error while parsing partitionFactor number out of {}.", fractionString);
+            }
+        }
+
+        // number of spark cores available = #sparkCoresMax - #receivers
+        int sparkCores = 1;
+        if (variables.containsKey("sparkCores")) {
+            String coresString = variables.get("sparkCores");
+            try {
+                sparkCores = Integer.parseInt(coresString);
+            } catch (NumberFormatException exc) {
+                log.error("Error while parsing sparkCores number out of {}.", coresString);
+            }
+        }
+
+        // calculate the best block interval that determines the number of partitions
+        int blockInterval = (int) (batchInterval * numberSources / (partitionFactor * sparkCores));
+        sparkConf.set(
+                Constants.SPARK_STREAMING_BLOCK_INTERVAL, String.valueOf(blockInterval));
+        log.info("Setting Spark Streaming blockInterval to {}", blockInterval);
+
+        this.jsc = new JavaStreamingContext(sparkConf, new Duration(batchInterval));
 
         // handle <service.../>
         initFlinkServices(doc);
