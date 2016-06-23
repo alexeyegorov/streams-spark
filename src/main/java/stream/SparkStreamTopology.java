@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -85,6 +86,13 @@ public class SparkStreamTopology {
         // handle <include.../>
         doc = new XIncluder().perform(doc, variables);
 
+        // handle properties and save them to variables
+        variables.addVariables(Utils.handleProperties(doc, variables));
+
+        // expand all variables
+        expandAllVariables(doc);
+
+        // print the expanded Document
         //TODO remove output of XML or add it as a method
         TransformerFactory tf = TransformerFactory.newInstance();
         javax.xml.transform.Transformer transformer = tf.newTransformer();
@@ -97,8 +105,6 @@ public class SparkStreamTopology {
         transformer.transform(new DOMSource(doc),
                 new StreamResult(new OutputStreamWriter(System.out, "UTF-8")));
 
-        // handle properties and save them to variables
-        variables.addVariables(Utils.handleProperties(doc, variables));
 
         // handle <service.../>
         initFlinkServices(doc);
@@ -116,6 +122,31 @@ public class SparkStreamTopology {
 //        JavaDStream<Long> data = sources.get("data").count();
         // create processor list handler and apply it to ProcessorLists
         return initSparkFunctions(doc, sources);
+    }
+
+    /**
+     * Expand all existing properties.
+     */
+    public void expandAllVariables(Document doc) {
+        expandAllVariables(doc.getChildNodes());
+    }
+
+    private void expandAllVariables(NodeList childNodes) {
+        for (int i = 0; i < childNodes.getLength(); i++) {
+            Node item = childNodes.item(i);
+            if (item.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) item;
+                NamedNodeMap attributes = element.getAttributes();
+                for (int j = 0; j < attributes.getLength(); j++) {
+                    Node attr = attributes.item(j);
+                    String expand = variables.expand(attr.getNodeValue());
+                    attr.setNodeValue(expand);
+                }
+                if (item.hasChildNodes()) {
+                    expandAllVariables(item.getChildNodes());
+                }
+            }
+        }
     }
 
     /**
