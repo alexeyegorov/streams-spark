@@ -10,8 +10,8 @@ echo "Copy filed to the server..."
 echo "------------------"
 echo "1. examples/example.xml"
 scp examples/example.xml egorov@ls8ws007.cs.uni-dortmund.de:/home/egorov/
-#echo "2. target/streams-spark-0.9.25-SNAPSHOT-spark-provided.jar"
-#scp target/streams-spark-0.9.25-SNAPSHOT-spark-provided.jar egorov@ls8ws007.cs.uni-dortmund.de:/home/egorov/
+#echo "2. target/streams-spark-0.9.26-SNAPSHOT-spark-provided.jar"
+#scp target/streams-spark-0.9.26-SNAPSHOT-spark-provided.jar egorov@ls8ws007.cs.uni-dortmund.de:/home/egorov/
 
 echo "------------------"
 echo "Submit the job..."
@@ -27,6 +27,7 @@ cd /Users/alexey/Downloads/spark-1.6.1-bin-hadoop2.3/
             --conf "spark.streaming.unpersist=true" \
             --conf "spark.ui.showConsoleProgress=false" \
             --conf "spark.streaming.backpressure.enabled=true" \
+            --conf "spark.streaming.receiver.maxRate=38" \
             --conf "spark.streaming.ui.retainedBatches=300" \
             --conf "spark.ui.retainedStages=300" \
             --conf "spark.locality.wait=1s" \
@@ -38,7 +39,7 @@ cd /Users/alexey/Downloads/spark-1.6.1-bin-hadoop2.3/
             --conf "spark.executor.logs.rolling.strategy=time" \
             --conf "spark.executor.logs.rolling.time.interval=hourly" \
             --conf "spark.executor.extraJavaOptions=-XX:MaxPermSize=2G -XX:+UseConcMarkSweepGC -Dlog4j.configuration=log4j-eir.properties" \
-            file:///home/egorov/streams-spark-0.9.25-SNAPSHOT-spark-provided.jar /home/egorov/example.xml
+            file:///home/egorov/streams-spark-0.9.26-SNAPSHOT-spark-provided.jar /home/egorov/example.xml
 
 #            --conf "spark.rdd.compress=true" \
 #            --conf "spark.locality.wait.process=5s" \
