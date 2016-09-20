@@ -362,6 +362,23 @@ public class SparkStreamTopology {
                         // apply process functions (processors)
                         JavaDStream<Data> dataJavaDStream = receiver.flatMap(function);
 
+                        //TODO add mapToPair and groupByKey
+//                                .mapToPair((PairFunction<Data, String, Data>) data
+//                                        -> new Tuple2<>((String) data.get("key"), data))
+//                                .groupByKey()
+
+                        //TODO add stateful processing
+//                                .updateStateByKey((Function2<List<Data>, Optional< SparkContext>,
+//                                        Optional<SparkContext>>) (v1, v2) -> {
+//                                    // retrieve context information
+//                                    SparkContext sparkContext = v2.get();
+//
+//                                    // update the state (context)
+//                                    ...
+//
+//                                    return Optional.of(sparkContext);
+//                                });
+
                         // detect output queues
                         List<String> outputQueues = Utils.getOutputQueues(el);
 
