@@ -370,12 +370,9 @@ public class SparkStreamTopology {
                         if (outputQueues.size() > 0) {
                             splitDataStream(sources, dataJavaDStream, outputQueues);
                         } else {
-                            dataJavaDStream.foreachRDD(new VoidFunction<JavaRDD<Data>>() {
-                                @Override
-                                public void call(JavaRDD<Data> dataJavaRDD) throws Exception {
-                                    long count = dataJavaRDD.count();
-                                    log.info("Processed {} event items.", count);
-                                }
+                            dataJavaDStream.foreachRDD((VoidFunction<JavaRDD<Data>>) dataJavaRDD -> {
+                                long count = dataJavaRDD.count();
+                                log.info("Processed {} event items.", count);
                             });
                         }
                         anyFunctionFound = true;
@@ -417,18 +414,15 @@ public class SparkStreamTopology {
                                         JavaDStream<Data> dataStream,
                                         List<String> outputQueues) {
         for (final String queue : outputQueues) {
-            JavaDStream<Data> filtered = dataStream.filter(new Function<Data, Boolean>() {
-                @Override
-                public Boolean call(Data data) throws Exception {
-                    if (data.containsKey(Constants.SPARK_QUEUE)) {
-                        String outputQueue = (String) data.get(Constants.SPARK_QUEUE);
-                        log.debug("spark.queue {}", outputQueue);
-                        if (queue.equals(outputQueue)) {
-                            return true;
-                        }
+            JavaDStream<Data> filtered = dataStream.filter((Function<Data, Boolean>) data -> {
+                if (data.containsKey(Constants.SPARK_QUEUE)) {
+                    String outputQueue = (String) data.get(Constants.SPARK_QUEUE);
+                    log.debug("spark.queue {}", outputQueue);
+                    if (queue.equals(outputQueue)) {
+                        return true;
                     }
-                    return false;
                 }
+                return false;
             });
             sources.put(queue, filtered);
         }
