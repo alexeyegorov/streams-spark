@@ -71,7 +71,8 @@ public class SparkQueue extends StreamsSparkObject implements Serializable, Queu
             className = element.getAttribute("class");
         }
         try {
-            this.queue = (Queue) obf.create(className, obf.getAttributes(element), element, variables);
+            this.queue = (Queue) obf.create(className,
+                    obf.getAttributes(element), element, variables);
         } catch (ClassCastException ex) {
             log.debug("Queue seems not to be a right queue: {} with class {}",
                     element, obf.findClassForElement(element));

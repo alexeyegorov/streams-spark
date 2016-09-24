@@ -178,7 +178,6 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
                 }
             }
         }
-
         return iterable;
     }
 
