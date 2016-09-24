@@ -10,6 +10,7 @@ import java.io.IOException;
 
 import stream.Data;
 import stream.DistributedMultiStream;
+import stream.io.Stream;
 import stream.runtime.setup.factory.ObjectFactory;
 import stream.runtime.setup.factory.StreamFactory;
 import stream.util.Variables;
@@ -27,7 +28,7 @@ public class SparkSourceStream extends Receiver<Data> {
      */
     private boolean isRunning = true;
 
-    private DistributedMultiStream streamProcessor;
+    private transient Stream stream;
 
     private int instanceNumber;
     private int copiesNumber;
@@ -39,33 +40,31 @@ public class SparkSourceStream extends Receiver<Data> {
         this.copiesNumber = copiesNumber;
         this.el = el;
         this.variables = variables;
+        init();
         log.info("Create SparkSourceStream. Instance {} out of {}.", instanceNumber, copiesNumber);
-
-        try {
-            streamProcessor = (DistributedMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
-            streamProcessor.getClass().getMethod("handleParallelism", int.class, int.class);
-            streamProcessor.handleParallelism(instanceNumber, copiesNumber);
-
-            // reset to null to enable serialization
-            streamProcessor = null;
-        } catch (Exception e) {
-            log.error("Initializing spark source stream failed during creation phase.");
-        }
     }
 
     /**
      * init() is called inside of super class' readResolve() method.
      */
-    protected void init() throws Exception {
-        streamProcessor = (DistributedMultiStream) StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
-        try{
-            Class<?> aClass = streamProcessor.getClass();
-            aClass.getMethod("handleParallelism", int.class, int.class);
-            streamProcessor.handleParallelism(instanceNumber, copiesNumber);
-        }catch(NoSuchMethodException exc){
-            log.info("Stream is not prepared to be handled in parallel.");
+    protected void init() {
+        try {
+            stream = StreamFactory.createStream(ObjectFactory.newInstance(), el, variables);
+            if (stream instanceof DistributedMultiStream) {
+                DistributedMultiStream streamProcessor = (DistributedMultiStream) stream;
+                try {
+                    Class<?> aClass = streamProcessor.getClass();
+                    aClass.getMethod("handleParallelism", int.class, int.class);
+                    streamProcessor.handleParallelism(instanceNumber, copiesNumber);
+                } catch (NoSuchMethodException exc) {
+                    log.info("Stream is not prepared to be handled in parallel.");
+                }
+                stream = streamProcessor;
+            }
+            stream.init();
+        } catch (Exception e) {
+            log.error("Initializing spark source stream failed during the creation phase.");
         }
-        streamProcessor.init();
     }
 
     /**
@@ -76,6 +75,7 @@ public class SparkSourceStream extends Receiver<Data> {
      */
     public Object readResolve() throws Exception {
         init();
+        //TODO remove this method as init is called in onStart
         return this;
     }
 
@@ -93,7 +93,7 @@ public class SparkSourceStream extends Receiver<Data> {
      * Execute stream processor and store data items in Spark.
      */
     private void streamDataItems() {
-        if (streamProcessor == null) {
+        if (stream == null) {
             log.debug("Stream processor has not been initialized properly.");
             return;
         }
@@ -102,7 +102,7 @@ public class SparkSourceStream extends Receiver<Data> {
             // Stream processor retrieves next element by calling readNext() method
             // stop if stream is finished and produces NULL
             try {
-                Data data = streamProcessor.read();
+                Data data = stream.read();
                 if (data != null) {
 //                    ArrayList<Data> list = new ArrayList<>();
 //                    list.add(data);
