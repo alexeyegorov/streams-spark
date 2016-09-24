@@ -34,6 +34,9 @@ public class IterateFilesStream extends DistributedMultiStream {
             description = "If something goes wrong while reading a file, just continue with the next one.")
     boolean skipErrors = true;
 
+    @Parameter(required = false)
+    private int limitFiles = -1;
+
     private ArrayList<FileStatus> fileStatuses;
     private int fileCounter;
 
@@ -43,7 +46,6 @@ public class IterateFilesStream extends DistributedMultiStream {
     private int countReadNext;
     private FileSystem fs;
 
-    private int limitFiles = -1;
 
     /**
      * Number of all initialiazed copies.
@@ -62,10 +64,6 @@ public class IterateFilesStream extends DistributedMultiStream {
 
     public IterateFilesStream(SourceURL url) {
         super(url);
-    }
-
-    public void setLimitFiles(int limitFiles) {
-        this.limitFiles = limitFiles;
     }
 
     @Override
