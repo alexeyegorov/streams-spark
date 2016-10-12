@@ -14,6 +14,7 @@ import java.net.URL;
 import stream.Constants;
 import stream.DocumentEncoder;
 import stream.SparkStreamTopology;
+import stream.runtime.StreamRuntime;
 import stream.util.XMLUtils;
 
 /**
@@ -43,7 +44,7 @@ public class deploy_on_spark {
      * @param time maximum time for a cluster to run
      */
     public static void main(URL url, Long time) throws Exception {
-        stream.runtime.StreamRuntime.loadUserProperties();
+        StreamRuntime.loadUserProperties();
 
 //        System.setProperty("rlog.host", "127.0.0.1");
 //        System.setProperty("rlog.token", "ab09cfe1d60b602cb7600b5729da939f");
