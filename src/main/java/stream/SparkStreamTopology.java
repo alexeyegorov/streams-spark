@@ -8,6 +8,7 @@ import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -385,10 +386,23 @@ public class SparkStreamTopology {
                             // pairs of (key, dataItem)
                             // then do the grouping and apply the function on each item
                             String groupBy = ((SparkProcessList) function).getGroupBy();
-                            dataJavaDStream = receiver
+                            JavaPairDStream<String, Data> pairDStream = receiver
                                     .mapToPair((PairFunction<Data, String, Data>) data
-                                            -> new Tuple2<>((String) data.get(groupBy), data))
-                                    .groupByKey()
+                                            -> new Tuple2<>((String) data.get(groupBy), data));
+                            JavaPairDStream<String, Iterable<Data>> groupedDStream;
+                            if (element.hasAttribute("copies")) {
+                                String copies = element.getAttribute("copies");
+                                try {
+                                    Integer tasks = Integer.valueOf(copies);
+                                    groupedDStream = pairDStream.groupByKey(tasks);
+                                } catch (Exception exc) {
+                                    log.error("Number of copies could not have been parsed {}", copies);
+                                    return false;
+                                }
+                            } else {
+                                groupedDStream = pairDStream.groupByKey();
+                            }
+                            dataJavaDStream = groupedDStream
                                     .flatMap(groupedItems -> {
                                         Iterable<Data> group = groupedItems._2();
                                         ArrayList<Data> groupedResult = new ArrayList<>(0);
