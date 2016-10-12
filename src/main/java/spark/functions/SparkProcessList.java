@@ -121,6 +121,9 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
         String id = element.getAttribute("id") + "@"
                 + InetAddress.getLocalHost().getHostName().hashCode()
                 + "::" + BatchFinishListener.getThreadNumber();
+
+        log.info("Initializing ProcessorList with BatchListener {} and ID={}", instance, id);
+
         element.setAttribute("id", id);
         context.set("process", id);
 
