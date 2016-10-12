@@ -330,31 +330,31 @@ public class SparkStreamTopology {
 
                         // handle the case of repartitioning (using previous number of
                         // partitions defined through batch and block interval)
-                        if (el.hasAttribute(Constants.NUM_WORKERS)) {
-                            String copiesStr = el.getAttribute(Constants.NUM_WORKERS);
-                            SparkConf conf = jsc.ssc().conf();
-                            if (conf.contains(Constants.SPARK_STREAMING_BLOCK_INTERVAL)) {
-                                String blockMillis = conf.get(Constants.SPARK_STREAMING_BLOCK_INTERVAL);
-                                blockMillis = blockMillis.substring(0, blockMillis.length() - 2);
-
-                                int blockInterval = Integer.parseInt(blockMillis);
-                                int copies = Integer.parseInt(copiesStr);
-
-                                // number of partitions used so far
-                                double numPartitions = ((double) batchInterval) / blockInterval;
-
-                                // difference between previous number of partitions to the
-                                // suggested new number of partitions
-                                double partitionDiff = Math.abs((numPartitions - copies) / numPartitions);
-
-                                // repartition DStream if the new level of parallelism is highly
-                                // different from the old level
-                                if (partitionDiff >= 0.2) {
-                                    //TODO use better constant?
-                                    receiver = receiver.repartition(copies);
-                                }
-                            }
-                        }
+//                        if (el.hasAttribute(Constants.NUM_WORKERS)) {
+//                            String copiesStr = el.getAttribute(Constants.NUM_WORKERS);
+//                            SparkConf conf = jsc.ssc().conf();
+//                            if (conf.contains(Constants.SPARK_STREAMING_BLOCK_INTERVAL)) {
+//                                String blockMillis = conf.get(Constants.SPARK_STREAMING_BLOCK_INTERVAL);
+//                                blockMillis = blockMillis.substring(0, blockMillis.length() - 2);
+//
+//                                int blockInterval = Integer.parseInt(blockMillis);
+//                                int copies = Integer.parseInt(copiesStr);
+//
+//                                // number of partitions used so far
+//                                double numPartitions = ((double) batchInterval) / blockInterval;
+//
+//                                // difference between previous number of partitions to the
+//                                // suggested new number of partitions
+//                                double partitionDiff = Math.abs((numPartitions - copies) / numPartitions);
+//
+//                                // repartition DStream if the new level of parallelism is highly
+//                                // different from the old level
+//                                if (partitionDiff >= 0.2) {
+//                                    //TODO use better constant?
+//                                    receiver = receiver.repartition(copies);
+//                                }
+//                            }
+//                        }
 
                         // retrieve the processor function
                         final FlatMapFunction<Data, Data> function = handler.getFunction();
