@@ -60,6 +60,9 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
      */
     protected Element element;
 
+    private String groupBy;
+    private boolean hasOutput = false;
+
     /**
      * Process context is used for initialization and is realized here by using SparkContext.
      */
@@ -75,6 +78,15 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
         } else {
             processId = UUID.randomUUID().toString();
         }
+
+        if (el.hasAttribute("groupBy")) {
+            groupBy = el.getAttribute("groupBy");
+        }
+
+        if (el.hasAttribute("output")) {
+            hasOutput = true;
+        }
+
         this.context = new SparkContext(processId);
         this.context.set(Constants.APPLICATION_ID,
                 streamTopology.variables.get(Constants.APPLICATION_ID));
@@ -103,6 +115,10 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
         }
 
         log.debug("Processors for '" + el + "' initialized.");
+    }
+
+    public String getGroupBy() {
+        return groupBy;
     }
 
     @Override
@@ -172,7 +188,12 @@ public class SparkProcessList extends StreamsSparkObject implements FlatMapFunct
     public Iterable<Data> call(Data data) throws Exception {
         ArrayList<Data> iterable = new ArrayList<>(0);
         if (data != null) {
-            process.process(data);
+            Data item = this.process.process(data);
+
+            //TODO: all items that are put into the queues by ENQUEUE are also in the OUTPUT
+            if (hasOutput) {
+                iterable.add(item);
+            }
 
             // go through all queues and collect written data items
             for (SparkQueue q : sparkQueues) {

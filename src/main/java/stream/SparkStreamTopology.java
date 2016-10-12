@@ -4,6 +4,7 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaDStream;
@@ -26,11 +27,13 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import scala.Tuple2;
 import spark.Utils;
 import spark.config.ProcessListHandler;
 import spark.config.QueueHandler;
 import spark.config.ServiceHandler;
 import spark.config.SourceHandler;
+import spark.functions.SparkProcessList;
 import spark.functions.SparkQueue;
 import spark.functions.SparkService;
 import spark.functions.SparkSourceStream;
@@ -303,18 +306,29 @@ public class SparkStreamTopology {
         for (int i = 0; i < length; i++) {
             Node node = list.item(i);
             if (node.getNodeType() == Node.ELEMENT_NODE) {
-                final Element el = (Element) node;
+                final Element element = (Element) node;
 
-                if (handler.handles(el)) {
+                if (handler.handles(element)) {
                     log.info("--------------------------------------------------------------------------------");
                     log.info("Handling element '{}'", node.getNodeName());
                     try {
-                        handler.handle(el, this);
+                        handler.handle(element, this);
                     } catch (Exception e) {
-                        log.error("Handler {} could not handle element {}.", handler, el);
+                        log.error("Handler {} could not handle element {}.", handler, element);
                         return false;
                     }
-                    String input = el.getAttribute("input");
+                    // distinguish whether the input is coming through the 'input' attribute
+                    // or through the 'output' attribute of another processor
+                    String input;
+                    if (element.hasAttribute("input")) {
+                        input = element.getAttribute("input");
+                    } else if (sources.containsKey(element.getAttribute("id"))) {
+                        input = element.getAttribute("id");
+                    } else {
+                        // stop processing as not input or output to this process has been found
+                        log.error("It is not possible to find the stream to this process.");
+                        return false;
+                    }
                     log.info("--------------------------------------------------------------------------------");
                     if (ProcessListHandler.class.isInstance(handler)) {
                         if (!sources.containsKey(input)) {
@@ -330,8 +344,8 @@ public class SparkStreamTopology {
 
                         // handle the case of repartitioning (using previous number of
                         // partitions defined through batch and block interval)
-//                        if (el.hasAttribute(Constants.NUM_WORKERS)) {
-//                            String copiesStr = el.getAttribute(Constants.NUM_WORKERS);
+//                        if (element.hasAttribute(Constants.NUM_WORKERS)) {
+//                            String copiesStr = element.getAttribute(Constants.NUM_WORKERS);
 //                            SparkConf conf = jsc.ssc().conf();
 //                            if (conf.contains(Constants.SPARK_STREAMING_BLOCK_INTERVAL)) {
 //                                String blockMillis = conf.get(Constants.SPARK_STREAMING_BLOCK_INTERVAL);
@@ -359,13 +373,37 @@ public class SparkStreamTopology {
                         // retrieve the processor function
                         final FlatMapFunction<Data, Data> function = handler.getFunction();
 
-                        // apply process functions (processors)
-                        JavaDStream<Data> dataJavaDStream = receiver.flatMap(function);
+                        // prepare the data stream
+                        // depending on the grouping, apply simple flatMap function or
+                        // mapToPair -> groupByKey -> flatMap
+                        JavaDStream<Data> dataJavaDStream;
 
-                        //TODO add mapToPair and groupByKey
-//                                .mapToPair((PairFunction<Data, String, Data>) data
-//                                        -> new Tuple2<>((String) data.get("key"), data))
-//                                .groupByKey()
+                        if (function.getClass().isAssignableFrom(SparkProcessList.class)
+                                && ((SparkProcessList) function).getGroupBy() != null) {
+                            // group the data stream by a key
+                            // for this, extract the given key from the data item and build
+                            // pairs of (key, dataItem)
+                            // then do the grouping and apply the function on each item
+                            String groupBy = ((SparkProcessList) function).getGroupBy();
+                            dataJavaDStream = receiver
+                                    .mapToPair((PairFunction<Data, String, Data>) data
+                                            -> new Tuple2<>((String) data.get(groupBy), data))
+                                    .groupByKey()
+                                    .flatMap(groupedItems -> {
+                                        Iterable<Data> group = groupedItems._2();
+                                        ArrayList<Data> groupedResult = new ArrayList<>(0);
+                                        for (Data item : group) {
+                                            Iterable<Data> call = function.call(item);
+                                            for (Data it : call) {
+                                                groupedResult.add(it);
+                                            }
+                                        }
+                                        return groupedResult;
+                                    });
+                        } else {
+                            // apply process functions (processors)
+                            dataJavaDStream = receiver.flatMap(function);
+                        }
 
                         //TODO add stateful processing
 //                                .updateStateByKey((Function2<List<Data>, Optional< SparkContext>,
@@ -380,13 +418,32 @@ public class SparkStreamTopology {
 //                                });
 
                         // detect output queues
-                        List<String> outputQueues = Utils.getOutputQueues(el);
+                        List<String> outputQueues = Utils.getOutputQueues(element);
 
+                        boolean followingProcess = false;
                         // split the data stream if there are any queues used inside
                         // of process list
                         if (outputQueues.size() > 0) {
                             splitDataStream(sources, dataJavaDStream, outputQueues);
-                        } else {
+                        }
+
+                        // if this element has 'output' attribute,
+                        // put the outcoming data stream into the list of the sources
+                        if (element.hasAttribute("output")) {
+                            String output = element.getAttribute("output");
+                            if (output.trim().length() > 0) {
+                                if (output.indexOf(",") > 0) {
+                                    for (String out : output.split(",")) {
+                                        sources.put(out, dataJavaDStream);
+                                    }
+                                } else {
+                                    sources.put(output, dataJavaDStream);
+                                }
+                            }
+                            followingProcess = true;
+                        }
+
+                        if (!followingProcess) {
                             dataJavaDStream.foreachRDD((VoidFunction<JavaRDD<Data>>) dataJavaRDD -> {
                                 long count = dataJavaRDD.count();
                                 log.info("Processed {} event items.", count);
