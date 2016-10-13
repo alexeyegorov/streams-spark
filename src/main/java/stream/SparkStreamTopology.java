@@ -381,14 +381,16 @@ public class SparkStreamTopology {
 
                         if (function.getClass().isAssignableFrom(SparkProcessList.class)
                                 && ((SparkProcessList) function).getGroupBy() != null) {
+
                             // group the data stream by a key
                             // for this, extract the given key from the data item and build
                             // pairs of (key, dataItem)
-                            // then do the grouping and apply the function on each item
                             String groupBy = ((SparkProcessList) function).getGroupBy();
                             JavaPairDStream<String, Data> pairDStream = receiver
                                     .mapToPair((PairFunction<Data, String, Data>) data
                                             -> new Tuple2<>((String) data.get(groupBy), data));
+
+                            // group by the key with the given number of tasks (if defined)
                             JavaPairDStream<String, Iterable<Data>> groupedDStream;
                             if (element.hasAttribute(Constants.COPIES)) {
                                 String copies = element.getAttribute(Constants.COPIES);
@@ -402,6 +404,9 @@ public class SparkStreamTopology {
                             } else {
                                 groupedDStream = pairDStream.groupByKey();
                             }
+
+                            // apply the function and collect all the results, that are
+                            // forwarded to the next process
                             dataJavaDStream = groupedDStream
                                     .flatMap(groupedItems -> {
                                         Iterable<Data> group = groupedItems._2();
