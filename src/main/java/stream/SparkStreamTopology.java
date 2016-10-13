@@ -241,7 +241,7 @@ public class SparkStreamTopology {
             if (!item.getParentNode().getNodeName().equals("stream")) {
                 if (sourceHandler.handles(item)) {
                     // name of the source
-                    String id = item.getAttribute("id");
+                    String id = item.getAttribute(Constants.PROCESS_ID);
 
                     // handle the source and create data stream for it
                     try {
@@ -321,10 +321,10 @@ public class SparkStreamTopology {
                     // distinguish whether the input is coming through the 'input' attribute
                     // or through the 'output' attribute of another processor
                     String input;
-                    if (element.hasAttribute("input")) {
-                        input = element.getAttribute("input");
-                    } else if (sources.containsKey(element.getAttribute("id"))) {
-                        input = element.getAttribute("id");
+                    if (element.hasAttribute(Constants.PROCESS_INPUT)) {
+                        input = element.getAttribute(Constants.PROCESS_INPUT);
+                    } else if (sources.containsKey(element.getAttribute(Constants.PROCESS_ID))) {
+                        input = element.getAttribute(Constants.PROCESS_ID);
                     } else {
                         // stop processing as not input or output to this process has been found
                         log.error("It is not possible to find the stream to this process.");
@@ -390,8 +390,8 @@ public class SparkStreamTopology {
                                     .mapToPair((PairFunction<Data, String, Data>) data
                                             -> new Tuple2<>((String) data.get(groupBy), data));
                             JavaPairDStream<String, Iterable<Data>> groupedDStream;
-                            if (element.hasAttribute("copies")) {
-                                String copies = element.getAttribute("copies");
+                            if (element.hasAttribute(Constants.COPIES)) {
+                                String copies = element.getAttribute(Constants.COPIES);
                                 try {
                                     Integer tasks = Integer.valueOf(copies);
                                     groupedDStream = pairDStream.groupByKey(tasks);
@@ -443,8 +443,8 @@ public class SparkStreamTopology {
 
                         // if this element has 'output' attribute,
                         // put the outcoming data stream into the list of the sources
-                        if (element.hasAttribute("output")) {
-                            String output = element.getAttribute("output");
+                        if (element.hasAttribute(Constants.PROCESS_OUTPUT)) {
+                            String output = element.getAttribute(Constants.PROCESS_OUTPUT);
                             if (output.trim().length() > 0) {
                                 if (output.indexOf(",") > 0) {
                                     for (String out : output.split(",")) {

@@ -15,4 +15,8 @@ public class Constants {
     public static final String SPARK_EXECUTOR_CORES = "spark.executor.cores";
     public static final String SPARK_STREAMING_BLOCK_INTERVAL = "spark.streaming.blockInterval";
     public static final String SPARK_QUEUE = "spark.queue";
+    public static final String PROCESS_OUTPUT = "output";
+    public static final String COPIES = "copies";
+    public static final String PROCESS_INPUT = "input";
+    public static final String PROCESS_ID = "id";
 }
