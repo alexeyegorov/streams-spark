@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Streams-spark by alexeyegorov</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Streams-spark</h1>
+      <h2 class="project-tagline"></h2>
+      <a href="https://github.com/alexeyegorov/streams-spark" class="btn">View on GitHub</a>
+      <a href="https://github.com/alexeyegorov/streams-spark/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/alexeyegorov/streams-spark/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="streams-spark" class="anchor" href="#streams-spark" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Streams Spark</h1>
+
+<p>This project is based upon <a href="https://bitbucket.org/AEgorov/streams-flink">streams-flink</a> that tries to slightly modify <a href="https://bitbucket.org/cbockermann/streams-storm">streams-storm</a> project in order to adapt it to <code>Flink</code>.
+Here we do the same procedure to adapt it to <code>Spark Streaming</code>.
+This way we can achieve parsing of XML configuration files for <code>streams framework</code> and translating them into <code>Spark</code>'s data flow graph.</p>
+
+<p>The XML definition of <code>streams</code> process has not been changed.
+We have support for <code>services</code> and <code>queues</code>. 
+We can still use <code>copies</code> attribute in <code>&lt;process ...&gt;</code> tag in order to controll the level of parallelism.
+Each copy is then mapped to a task slot inside of the Flink cluster.
+Each <code>process</code>, e.g. as the following</p>
+
+<pre><code>&lt;process input="data" id="extraction" copies="1"&gt;
+</code></pre>
+
+<p>is translated to a flatMap function.</p>
+
+<pre><code>JavaDStream&lt;Data&gt; dataJavaDStream = receiver.flatMap(function);
+</code></pre>
+
+<p>Parallelism level is set over <code>copies</code> attribute.
+In Spark Streaming it can be defined through the number of the partitions in a RDD.
+On the one hand it can be set through <code>batch interval / block interval</code> or we can repartition the data manually as followed:</p>
+
+<pre><code>if (el.hasAttribute("copies")) {
+    receiver = receiver.repartition(Integer.parseInt(element.getAttribute("copies")));
+}
+</code></pre>
+
+<p>This value should be computed as the number of all available cores minus 1 core for the driver.</p>
+
+<p>The easiest way to start a Spark job is to use the submit script by Spark itself (many configurations can be set here or directly in code):</p>
+
+<pre><code>./bin/spark-submit --class spark.deploy_on_spark --master spark://129.217.30.197:6066 \
+            --deploy-mode cluster \
+            --executor-memory 9G \
+            --driver-memory 2G \
+            --num-executors 2 --executor-cores 5 \
+            --conf "spark.eventLog.dir=file:///home/egorov/spark-eventlog" \
+            --conf "spark.eventLog.enabled=true" \
+            --conf "spark.streaming.unpersist=true" \
+            --conf "spark.ui.showConsoleProgress=false" \
+            --conf "spark.streaming.backpressure.enabled=true" \
+            --conf "spark.streaming.ui.retainedBatches=300" \
+            --conf "spark.ui.retainedStages=300" \
+            --conf "spark.locality.wait=1s" \
+            --conf "spark.locality.wait.node=0s" \
+            --conf "spark.locality.wait.rack=1s" \
+            --conf "spark.worker.cleanup.enabled=true" \
+            --conf "spark.worker.cleanup.interval=1800" \
+            --conf "spark.executor.logs.rolling.maxRetainedFiles=4" \
+            --conf "spark.executor.logs.rolling.strategy=time" \
+            --conf "spark.executor.logs.rolling.time.interval=hourly" \
+            --conf "spark.executor.extraJavaOptions=-XX:MaxPermSize=2G -XX:+UseConcMarkSweepGC -Dlog4j.configuration=log4j-eir.properties" \
+            file:///home/egorov/streams-spark-0.9.25-SNAPSHOT-spark-provided.jar /home/egorov/example.xml
+</code></pre>
+
+<p><code>spark.locality.wait{.node,.rack}</code> setting can be used to enable splitting the tasks among several nodes.
+Otherwise default setting of 3 seconds will be used and possibly all tasks will run on the node where the data is received.</p>
+
+<p>Some further optimizations that are mentioned above has been described <a href="https://blog.cloudera.com/blog/2016/01/how-cigna-tuned-its-spark-streaming-app-for-real-time-processing-with-apache-kafka/">here</a>.</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/alexeyegorov/streams-spark">Streams-spark</a> is maintained by <a href="https://github.com/alexeyegorov">alexeyegorov</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
