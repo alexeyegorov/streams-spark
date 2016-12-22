@@ -1,5 +1,9 @@
 package spark;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.spark.SparkConf;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
@@ -9,9 +13,12 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import java.io.File;
+import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 
 import stream.Constants;
+import stream.DistributedStream;
 import stream.DocumentEncoder;
 import stream.SparkStreamTopology;
 import stream.runtime.StreamRuntime;
@@ -31,25 +38,25 @@ public class deploy_on_spark {
      * Method to start cluster and run XML configuration as spark topology on it while setting the
      * maximum running time to Long.MAX_VALUE.
      *
-     * @param url path to XML configuration
+     * @param in path to XML configuration
      */
-    public static void main(URL url) throws Exception {
-        main(url, Long.MAX_VALUE);
+    public static void main(InputStream in) throws Exception {
+        main(in, Long.MAX_VALUE);
     }
 
     /**
      * Parse XML configuration, create spark topology out of it and run it for some given time.
      *
-     * @param url  path to the XML configuration
+     * @param in  path to the XML configuration
      * @param time maximum time for a cluster to run
      */
-    public static void main(URL url, Long time) throws Exception {
+    public static void main(InputStream in, Long time) throws Exception {
         StreamRuntime.loadUserProperties();
 
 //        System.setProperty("rlog.host", "127.0.0.1");
 //        System.setProperty("rlog.token", "ab09cfe1d60b602cb7600b5729da939f");
 
-        String xml = storm.run.createIDs(url.openStream());
+        String xml = storm.run.createIDs(in);
 
         Document doc = XMLUtils.parseDocument(xml);
 
@@ -116,11 +123,22 @@ public class deploy_on_spark {
             log.error("Missing file path to XML configuration of streams job to run.");
             return;
         }
-        File file = new File(args[0]);
-        if (!file.getAbsoluteFile().exists() || !file.exists()) {
-            log.error("Path to XML configuration is not valid: {}", file.toString());
-            return;
+        if (args[0].startsWith("hdfs:")) {
+            DistributedFileSystem dfs = new DistributedFileSystem();
+            dfs.initialize(new URI("hdfs://s876cn01.cs.uni-dortmund.de:8020"), new Configuration());
+            Path path = new Path(args[0]);
+            if (!dfs.exists(path)) {
+                log.error("Path to XML configuration is not valid: {}", path.toString());
+                return;
+            }
+            main(dfs.open(path));
+        }else{
+            File file = new File(args[0]);
+            if (!file.getAbsoluteFile().exists() || !file.exists()) {
+                log.error("Path to XML configuration is not valid: {}", file.toString());
+                return;
+            }
+            main(file.toURI().toURL().openStream());
         }
-        main(file.toURI().toURL());
     }
 }
