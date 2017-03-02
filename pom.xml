@@ -19,6 +19,22 @@
         <spark.version>(1.0.0,]</spark.version>
     </properties>
 
+    <distributionManagement>
+        <repository>
+            <id>sonatype-releases</id>
+            <name>sonatype Maven Staging Repository</name>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+        <snapshotRepository>
+            <id>sonatype-snapshots</id>
+            <name>sonatype Snapshot Repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <site>
+            <id>jwall-site</id>
+            <url>scp://jwall.org/var/www/sfb876.de/htdocs/streams-spark/</url>
+        </site>
+    </distributionManagement>
 
     <repositories>
         <repository>
