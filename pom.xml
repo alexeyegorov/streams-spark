@@ -203,6 +203,18 @@
 
         <dependency>
             <groupId>de.sfb876</groupId>
+            <artifactId>streams-core</artifactId>
+            <version>${streams.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>de.sfb876</groupId>
+            <artifactId>streams-runtime</artifactId>
+            <version>${streams.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>de.sfb876</groupId>
             <artifactId>streams-storm</artifactId>
             <version>[0.9.20,)</version>
             <exclusions>
