@@ -207,8 +207,7 @@
             </plugins>
         </pluginManagement>
     </build>
-
-
+    
     <dependencies>
         <dependency>
             <groupId>de.sfb876</groupId>
